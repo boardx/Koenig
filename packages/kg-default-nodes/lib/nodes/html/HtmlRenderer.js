@@ -1,15 +1,20 @@
 import {addCreateDocumentOption} from '../../utils/add-create-document-option';
+import {renderEmptyContainer} from '../../utils/render-empty-container';
 
-export function renderHtmlNodeToDOM(node, options = {}) {
+export function renderHtmlNode(node, options = {}) {
     addCreateDocumentOption(options);
-
     const document = options.createDocument();
 
-    const html = node.getHtml() || '';
+    const html = node.html;
 
-    const div = document.createElement('div');
+    if (!html) {
+        return renderEmptyContainer(document);
+    }
 
-    div.innerHTML = html;
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = html;
 
-    return div;
+    // `type: 'value'` will render the value of the textarea element
+    // @see @tryghost/kg-lexical-html-renderer package
+    return {element: textarea, type: 'value'};
 }

@@ -9,12 +9,26 @@ export function buildCardMenu(nodes, {query, config} = {}) {
     let maxItemIndex = -1;
 
     function addMenuItem(item) {
+        // items hidden based on missing config (e.g. Tenor API key for gif card)
         if (!!item.isHidden && item.isHidden?.({config})) {
             return;
         }
 
-        if (query && (!item.matches || !item.matches.find(m => m.startsWith(query)))) {
+        // items restricted for posts vs. pages (e.g. email CTA card)
+        if (item.postType && config?.post?.displayName && item.postType !== config?.post?.displayName) {
             return;
+        }
+
+        const matches = typeof item?.matches === 'function'
+            ? item?.matches?.(query, item.label)
+            : item?.matches?.find?.(m => m.startsWith(query));
+
+        if (query && !matches) {
+            return;
+        }
+
+        if (typeof item.insertParams === 'function') {
+            item.insertParams = item.insertParams({config});
         }
 
         const section = item.section || 'Primary';
@@ -75,7 +89,7 @@ function buildSnippetMenuItem(data, config) {
         label: data.name,
         Icon: SnippetCardIcon,
         section: 'Snippets',
-        matches: [name],
+        matches: query => name.indexOf(query) > -1,
         insertCommand: INSERT_SNIPPET_COMMAND,
         insertParams: data,
         onRemove: () => config.deleteSnippet(data)

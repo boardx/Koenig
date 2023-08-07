@@ -10,6 +10,7 @@ import KoenigNestedComposer from './components/KoenigNestedComposer';
 import AudioPlugin from './plugins/AudioPlugin';
 import CalloutPlugin from './plugins/CalloutPlugin';
 import CardMenuPlugin from './plugins/CardMenuPlugin';
+import CollectionPlugin from './plugins/CollectionPlugin';
 import DragDropPastePlugin from './plugins/DragDropPastePlugin';
 import DragDropReorderPlugin from './plugins/DragDropReorderPlugin';
 import ExternalControlPlugin from './plugins/ExternalControlPlugin';
@@ -23,12 +24,14 @@ import ImagePlugin from './plugins/ImagePlugin';
 import KoenigBehaviourPlugin from './plugins/KoenigBehaviourPlugin';
 import MarkdownPlugin from './plugins/MarkdownPlugin';
 import MarkdownShortcutPlugin from './plugins/MarkdownShortcutPlugin';
+import MobiledocCopyPlugin from './plugins/MobiledocCopyPlugin';
 import PlusCardMenuPlugin from './plugins/PlusCardMenuPlugin';
 import RestrictContentPlugin from './plugins/RestrictContentPlugin';
 import SignupPlugin from './plugins/SignupPlugin';
 import SlashCardMenuPlugin from './plugins/SlashCardMenuPlugin';
 import TogglePlugin from './plugins/TogglePlugin';
 import VideoPlugin from './plugins/VideoPlugin';
+import WordCountPlugin from './plugins/WordCountPlugin';
 
 import AllDefaultPlugins from './plugins/AllDefaultPlugins';
 
@@ -68,19 +71,22 @@ export {
     FilePlugin,
     FloatingToolbarPlugin,
     GalleryPlugin,
+    HeaderPlugin,
     HorizontalRulePlugin,
     HtmlOutputPlugin,
     ImagePlugin,
     KoenigBehaviourPlugin,
     MarkdownPlugin,
     MarkdownShortcutPlugin,
+    MobiledocCopyPlugin,
     PlusCardMenuPlugin,
     RestrictContentPlugin,
+    SignupPlugin,
     SlashCardMenuPlugin,
     TogglePlugin,
-    HeaderPlugin,
     VideoPlugin,
-    SignupPlugin,
+    WordCountPlugin,
+    CollectionPlugin,
 
     AllDefaultPlugins,
 
@@ -96,3 +102,6 @@ export {
     BASIC_TRANSFORMERS,
     MINIMAL_TRANSFORMERS
 };
+
+// eslint-disable-next-line no-undef
+export const version = __APP_VERSION__ ? __APP_VERSION__ : 'development';

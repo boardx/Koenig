@@ -70,6 +70,17 @@ const MARKUP_TO_FORMAT = {
     sup: 1 << 6
 };
 
+const CARD_NAME_MAP = {
+    code: 'codeblock',
+    hr: 'horizontalrule'
+};
+
+const CARD_PROPERTY_MAP = {
+    embed: {
+        type: 'embedType'
+    }
+};
+
 export function mobiledocToLexical(serializedMobiledoc) {
     if (serializedMobiledoc === null || serializedMobiledoc === undefined || serializedMobiledoc === '') {
         return JSON.stringify(BLANK_DOC);
@@ -87,6 +98,8 @@ export function mobiledocToLexical(serializedMobiledoc) {
 
     return JSON.stringify(lexical);
 }
+
+/* internal functions ------------------------------------------------------- */
 
 function buildEmptyDoc() {
     return {
@@ -112,27 +125,40 @@ function addRootChild(child, mobiledoc, lexical) {
         // Otherwise direction should be null
         // Not sure if this is necessary:
         // if we don't plan to support RTL, we could just set 'ltr' in all cases and ignore null
-        if (lexical.root.children[0].children.length > 0) {
+        if (lexicalChild.children?.length > 0) {
             lexical.root.direction = 'ltr';
         }
     } else if (sectionTypeIdentifier === 2) {
         // Image section
+        // Not used in Ghost
     } else if (sectionTypeIdentifier === 3) {
         // List section
+        const lexicalChild = convertListSectionToLexical(child, mobiledoc);
+        lexical.root.children.push(lexicalChild);
+        lexical.root.direction = 'ltr'; // mobiledoc only supports LTR
     } else if (sectionTypeIdentifier === 10) {
         // Card section
+        const lexicalChild = convertCardSectionToLexical(child, mobiledoc);
+        lexical.root.children.push(lexicalChild);
     }
 }
 
 function convertMarkupSectionToLexical(section, mobiledoc) {
     const tagName = section[1]; // e.g. 'p'
     const markers = section[2]; // e.g. [[0, [0], 0, "Hello world"]]
-    const markups = mobiledoc.markups;
-    const atoms = mobiledoc.atoms;
 
     // Create an empty Lexical node from the tag name
     // We will add nodes to the children array later
     const lexicalNode = createEmptyLexicalNode(tagName);
+
+    populateLexicalNodeWithMarkers(lexicalNode, markers, mobiledoc);
+
+    return lexicalNode;
+}
+
+function populateLexicalNodeWithMarkers(lexicalNode, markers, mobiledoc) {
+    const markups = mobiledoc.markups;
+    const atoms = mobiledoc.atoms;
 
     // Initiate some variables before looping over all the markers
     let openMarkups = []; // tracks which markup tags are open for the current marker
@@ -206,7 +232,6 @@ function convertMarkupSectionToLexical(section, mobiledoc) {
             }
         }
     }
-    return lexicalNode;
 }
 
 // Creates a text node from the given text and format
@@ -259,4 +284,39 @@ function convertMarkupTagsToLexicalFormatBitmask(tags) {
         }
     });
     return format;
+}
+
+function convertListSectionToLexical(child, mobiledoc) {
+    const tag = child[1];
+    const listType = tag === 'ul' ? 'bullet' : 'number';
+    const listNode = createEmptyLexicalNode(tag, {tag, type: 'list', listType, start: 1, direction: 'ltr'});
+
+    child[2]?.forEach((listItem, i) => {
+        const listItemNode = createEmptyLexicalNode('li', {type: 'listitem', value: i + 1, direction: 'ltr'});
+        populateLexicalNodeWithMarkers(listItemNode, listItem, mobiledoc);
+        listNode.children.push(listItemNode);
+    });
+
+    return listNode;
+}
+
+function convertCardSectionToLexical(child, mobiledoc) {
+    let [cardName, payload] = mobiledoc.cards[child[1]];
+
+    // rename card if there's a difference between mobiledoc and lexical
+    cardName = CARD_NAME_MAP[cardName] || cardName;
+
+    // rename any properties to match lexical
+    if (CARD_PROPERTY_MAP[cardName]) {
+        const map = CARD_PROPERTY_MAP[cardName];
+
+        for (const [oldName, newName] of Object.entries(map)) {
+            payload[newName] = payload[oldName];
+            delete payload[oldName];
+        }
+    }
+
+    const decoratorNode = {type: cardName, ...payload};
+
+    return decoratorNode;
 }

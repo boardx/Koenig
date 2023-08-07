@@ -49,15 +49,15 @@ describe('HtmlNode', function () {
         it('has getters for all properties', editorTest(function () {
             const htmlNode = $createHtmlNode(dataset);
 
-            htmlNode.getHtml().should.equal('<p>Paragraph with:</p><ul><li>list</li><li>items</li></ul>');
+            htmlNode.html.should.equal('<p>Paragraph with:</p><ul><li>list</li><li>items</li></ul>');
         }));
 
         it('has setters for all properties', editorTest(function () {
             const htmlNode = $createHtmlNode(dataset);
 
-            htmlNode.getHtml().should.equal('<p>Paragraph with:</p><ul><li>list</li><li>items</li></ul>');
-            htmlNode.setHtml('<p>Paragraph 1</p><p>Paragraph 2</p>');
-            htmlNode.getHtml().should.equal('<p>Paragraph 1</p><p>Paragraph 2</p>');
+            htmlNode.html.should.equal('<p>Paragraph with:</p><ul><li>list</li><li>items</li></ul>');
+            htmlNode.html = '<p>Paragraph 1</p><p>Paragraph 2</p>';
+            htmlNode.html.should.equal('<p>Paragraph 1</p><p>Paragraph 2</p>');
         }));
 
         it('has getDataset() convenience method', editorTest(function () {
@@ -73,8 +73,50 @@ describe('HtmlNode', function () {
             const htmlNode = $createHtmlNode(dataset);
 
             htmlNode.isEmpty().should.be.false;
-            htmlNode.setHtml('');
+            htmlNode.html = '';
             htmlNode.isEmpty().should.be.true;
+        }));
+    });
+
+    describe('isEmpty()', function () {
+        it('returns true if markdown is empty', editorTest(function () {
+            const htmlNode = $createHtmlNode(dataset);
+
+            htmlNode.isEmpty().should.be.false;
+            htmlNode.markdown = '';
+            htmlNode.isEmpty().should.be.true;
+        }));
+    });
+
+    describe('getType', function () {
+        it('returns the correct node type', editorTest(function () {
+            HtmlNode.getType().should.equal('html');
+        }));
+    });
+
+    describe('clone', function () {
+        it('returns a copy of the current node', editorTest(function () {
+            const htmlNode = $createHtmlNode(dataset);
+            const htmlNodeDataset = htmlNode.getDataset();
+            const clone = HtmlNode.clone(htmlNode);
+            const cloneDataset = clone.getDataset();
+
+            cloneDataset.should.deepEqual({...htmlNodeDataset});
+        }));
+    });
+
+    describe('urlTransformMap', function () {
+        it('contains the expected URL mapping', editorTest(function () {
+            HtmlNode.urlTransformMap.should.deepEqual({
+                html: 'html'
+            });
+        }));
+    });
+
+    describe('hasEditMode', function () {
+        it('returns true', editorTest(function () {
+            const htmlNode = $createHtmlNode(dataset);
+            htmlNode.hasEditMode().should.be.true;
         }));
     });
 
@@ -82,8 +124,8 @@ describe('HtmlNode', function () {
         it('creates a html card', editorTest(function () {
             const htmlNode = $createHtmlNode(dataset);
             const {element, type} = htmlNode.exportDOM(exportOptions);
-            type.should.equal('inner');
-            element.innerHTML.should.prettifyTo(html`
+            type.should.equal('value');
+            element.value.should.prettifyTo(html`
                 <p>Paragraph with:</p>
                 <ul>
                     <li>list</li>
@@ -92,11 +134,21 @@ describe('HtmlNode', function () {
             `);
         }));
 
-        it('renders nothing with a missing src', editorTest(function () {
+        it('renders an empty div with missing html', editorTest(function () {
             const htmlNode = $createHtmlNode();
-            const {element} = htmlNode.exportDOM(exportOptions);
+            const {element, type} = htmlNode.exportDOM(exportOptions);
+            type.should.equal('inner');
 
-            element.innerHTML.should.equal('');
+            element.outerHTML.should.equal('<span></span>');
+        }));
+
+        it('renders unclosed tags', editorTest(function () {
+            const htmlNode = $createHtmlNode({html: '<div style="color:red">'});
+            const {element, type} = htmlNode.exportDOM(exportOptions);
+            type.should.equal('value');
+
+            // do not prettify, it will add a closing tag to the compared string causing a false pass
+            element.value.should.equal('<div style="color:red">');
         }));
     });
 
@@ -165,7 +217,7 @@ describe('HtmlNode', function () {
                 try {
                     const [htmlNode] = $getRoot().getChildren();
 
-                    htmlNode.getHtml().should.equal('<p>Paragraph with:</p><ul><li>list</li><li>items</li></ul>');
+                    htmlNode.html.should.equal('<p>Paragraph with:</p><ul><li>list</li><li>items</li></ul>');
 
                     done();
                 } catch (e) {
@@ -175,31 +227,14 @@ describe('HtmlNode', function () {
         });
     });
 
-    describe('hasEditMode', function () {
-        it('returns true', editorTest(function () {
-            const htmlNode = $createHtmlNode(dataset);
-            htmlNode.hasEditMode().should.be.true;
-        }));
-    });
+    describe('getTextContent', function () {
+        it('returns contents', editorTest(function () {
+            const node = $createHtmlNode();
+            node.getTextContent().should.equal('');
 
-    describe('clone', function () {
-        it('clones the node', editorTest(function () {
-            const htmlNode = $createHtmlNode(dataset);
-            const clonedHtmlNode = HtmlNode.clone(htmlNode);
-            $isHtmlNode(clonedHtmlNode).should.be.true;
-            clonedHtmlNode.getHtml().should.equal('<p>Paragraph with:</p><ul><li>list</li><li>items</li></ul>');
-        }));
-    });
+            node.html = '<script>const test = true;</script>';
 
-    describe('static properties', function () {
-        it('getType', editorTest(function () {
-            HtmlNode.getType().should.equal('html');
-        }));
-
-        it('urlTransformMap', editorTest(function () {
-            HtmlNode.urlTransformMap.should.deepEqual({
-                html: 'html'
-            });
+            node.getTextContent().should.equal('<script>const test = true;</script>\n\n');
         }));
     });
 });

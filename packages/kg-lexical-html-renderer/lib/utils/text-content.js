@@ -14,15 +14,13 @@ const FORMAT_TAG_MAP = {
 // Builds and renders text content, useful to ensure proper format tag opening/closing
 // and html escaping
 class TextContent {
-    constructor() {
-        const jsdom = require('jsdom');
-        const {JSDOM} = jsdom;
-
-        this.dom = new JSDOM();
+    constructor(dom) {
+        this.dom = dom;
         this.doc = this.dom.window.document;
         this.root = this.doc.createElement('div');
         this.currentNode = this.root;
         this.currentFormats = [];
+        this.queuedLineBreaks = 0;
     }
 
     addTextNode(node/*, parentNode, options*/) {
@@ -30,18 +28,23 @@ class TextContent {
             return;
         }
 
-        // close any unused format tags for this node
-        this.currentFormats.forEach((format) => {
+        // remove formats that shouldn't be applied to this node
+        // NOTE: ensure we're working with a copy of the array otherwise forEach bails early when we use .shift()
+        Array.from(this.currentFormats).forEach((format) => {
             if (!node.hasFormat(format)) {
                 this.currentFormats.shift();
                 this.currentNode = this.currentFormats[0]
-                    ? this.currentNode.closest(FORMAT_TAG_MAP[this.currentFormats[0]])
+                    ? this.currentNode.parentNode
                     : this.root;
             }
         });
 
+        if (!this.currentNode) {
+            this.currentNode = this.root;
+        }
+
         // insert any queued line breaks
-        this._insertQueuedLineBreak();
+        this._insertQueuedLineBreaks();
 
         // add any new format tags for this node
         Object.entries(FORMAT_TAG_MAP).forEach(([format, tag]) => {
@@ -62,7 +65,7 @@ class TextContent {
     }
 
     addLineBreak() {
-        this.queueLineBreak = true;
+        this.queuedLineBreaks = this.queuedLineBreaks + 1;
     }
 
     addLinkNode(node, parentNode, exportChildren, options) {
@@ -83,7 +86,7 @@ class TextContent {
     }
 
     render() {
-        this._insertQueuedLineBreak();
+        this._insertQueuedLineBreaks();
         return this.root.innerHTML;
     }
 
@@ -91,13 +94,16 @@ class TextContent {
         this.root = this.doc.createElement('DIV');
         this.currentNode = this.root;
         this.currentFormats = [];
+        this.queuedLineBreaks = 0;
     }
 
-    _insertQueuedLineBreak() {
-        if (this.queueLineBreak) {
+    _insertQueuedLineBreaks() {
+        while (this.queuedLineBreaks > 0) {
             this.currentNode.append(this.doc.createElement('BR'));
-            this.queueLineBreak = false;
+            this.queuedLineBreaks = this.queuedLineBreaks - 1;
         }
+
+        this.queuedLineBreaks = 0;
     }
 }
 

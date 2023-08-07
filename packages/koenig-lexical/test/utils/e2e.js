@@ -10,19 +10,48 @@ const {JSDOM} = jsdom;
 export async function initialize({page, uri = '/#/?content=false'}) {
     const url = `http://localhost:${E2E_PORT}${uri}`;
 
-    await page.setViewportSize({width: 1000, height: 1000});
+    const currentViewportSize = page.viewportSize();
+    if (currentViewportSize.width !== 1000 || currentViewportSize.height !== 1000) {
+        await page.setViewportSize({width: 1000, height: 1000});
+    }
 
-    await page.goto(url);
-    await page.reload(); // required with hash URLs otherwise app doesn't always reset
-    await page.waitForSelector('.koenig-lexical');
+    const currentUrl = page.url();
+    if (currentUrl === 'about:blank') {
+        // First page load
+        await page.goto(url);
 
-    await exposeLexicalEditor(page);
+        await page.waitForSelector('.koenig-lexical');
+
+        await exposeLexicalEditor(page);
+    } else {
+        // Subsequent pages nagivated to using react router
+        await page.evaluate(async ([navigateTo, force]) => {
+            window.lexicalEditor.blur();
+            window.lexicalEditor.setEditorState(window.originalEditorState);
+
+            if (force) {
+                // Purposefully navigate away from the current page to ensure component is reloaded
+                window.navigate('/404');
+                await new Promise((res) => {
+                    setTimeout(() => {
+                        // Navigate in a task to ensure React Router cannot optimise out our first navigation
+                        window.navigate(navigateTo);
+                        res();
+                    }, 10);
+                });
+            } else {
+                await window.navigate(navigateTo);
+            }
+        }, [uri.slice(2), currentUrl === url]);
+        await exposeLexicalEditor(page);
+    }
 }
 
 async function exposeLexicalEditor(page) {
     await page.waitForSelector('[data-lexical-editor]');
     await page.evaluate(() => {
         window.lexicalEditor = document.querySelector('[data-lexical-editor]').__lexicalEditor;
+        window.originalEditorState = window.lexicalEditor.getEditorState();
     });
 }
 
@@ -42,7 +71,8 @@ export async function assertHTML(
         ignoreCardContents = false,
         ignoreCardToolbarContents = false,
         ignoreDragDropAttrs = true,
-        ignoreDataTestId = true
+        ignoreDataTestId = true,
+        ignoreCardCaptionContents = false
     } = {}
 ) {
     const actualHtml = await page.$eval('div[contenteditable="true"]', e => e.innerHTML);
@@ -54,7 +84,8 @@ export async function assertHTML(
         ignoreCardContents,
         ignoreCardToolbarContents,
         ignoreDragDropAttrs,
-        ignoreDataTestId
+        ignoreDataTestId,
+        ignoreCardCaptionContents
     });
     const expected = prettifyHTML(expectedHtml.replace(/\n/gm, ''), {
         ignoreClasses,
@@ -64,7 +95,8 @@ export async function assertHTML(
         ignoreCardContents,
         ignoreCardToolbarContents,
         ignoreDragDropAttrs,
-        ignoreDataTestId
+        ignoreDataTestId,
+        ignoreCardCaptionContents
     });
     expect(actual).toEqual(expected);
 }
@@ -98,7 +130,7 @@ export function prettifyHTML(string, options = {}) {
     // replace all instances of blob:http with "blob:..."
     output = output.replace(/blob:http[^"]*/g, 'blob:...');
 
-    if (options.ignoreCardContents || options.ignoreCardToolbarContents) {
+    if (options.ignoreCardContents || options.ignoreCardToolbarContents || options.ignoreCardCaptionContents) {
         const {document} = (new JSDOM(output)).window;
 
         const querySelectors = [];
@@ -107,6 +139,9 @@ export function prettifyHTML(string, options = {}) {
         }
         if (options.ignoreCardToolbarContents) {
             querySelectors.push('[data-kg-card-toolbar]');
+        }
+        if (options.ignoreCardCaptionContents) {
+            querySelectors.push('figcaption');
         }
 
         document.querySelectorAll(querySelectors.join(', ')).forEach((element) => {
@@ -301,6 +336,10 @@ export async function dragMouse(
 export function isMac() {
     // issue https://github.com/microsoft/playwright/issues/12168
     return process.platform === 'darwin';
+}
+
+export function ctrlOrCmd() {
+    return isMac() ? 'Meta' : 'Control';
 }
 
 // note: we always use lowercase for the cardName but we use start case for the menu item attribute

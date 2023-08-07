@@ -1,6 +1,7 @@
 import CardContext from '../context/CardContext';
 import KoenigComposerContext from '../context/KoenigComposerContext';
 import useFileDragAndDrop from '../hooks/useFileDragAndDrop';
+import usePinturaEditor from '../hooks/usePinturaEditor';
 import {$getNodeByKey} from 'lexical';
 import {ActionToolbar} from '../components/ui/ActionToolbar';
 import {EDIT_CARD_COMMAND} from '../plugins/KoenigBehaviourPlugin';
@@ -8,13 +9,15 @@ import {SignupCard} from '../components/ui/cards/SignupCard.jsx';
 import {SnippetActionToolbar} from '../components/ui/SnippetActionToolbar.jsx';
 import {ToolbarMenu, ToolbarMenuItem, ToolbarMenuSeparator} from '../components/ui/ToolbarMenu';
 import {backgroundImageUploadHandler} from '../utils/imageUploadHandler';
-import {useContext, useEffect, useState} from 'react';
+import {openFileSelection} from '../utils/openFileSelection';
+import {useContext, useEffect, useRef, useState} from 'react';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 
 function SignupNodeComponent({
     alignment,
     backgroundColor,
     backgroundImageSrc,
+    backgroundSize,
     buttonColor,
     buttonText,
     buttonTextColor,
@@ -30,7 +33,8 @@ function SignupNodeComponent({
     subheader,
     subheaderTextEditor,
     subheaderTextEditorInitialState,
-    textColor
+    textColor,
+    isSwapped
 }) {
     const [editor] = useLexicalComposerContext();
     const {cardConfig} = useContext(KoenigComposerContext);
@@ -39,6 +43,9 @@ function SignupNodeComponent({
     const [showSnippetToolbar, setShowSnippetToolbar] = useState(false);
     const [availableLabels, setAvailableLabels] = useState([]);
     const [showBackgroundImage, setShowBackgroundImage] = useState(Boolean(backgroundImageSrc));
+    const [lastBackgroundImage, setLastBackgroundImage] = useState(backgroundImageSrc);
+    const {isEnabled: isPinturaEnabled, openEditor: openImageEditor} = usePinturaEditor({config: cardConfig.pinturaConfig});
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         if (cardConfig?.fetchLabels) {
@@ -52,6 +59,10 @@ function SignupNodeComponent({
         if (layout !== 'split') {
             setShowBackgroundImage(Boolean(backgroundImageSrc));
         }
+
+        if (layout === 'split' && !backgroundImageSrc && lastBackgroundImage) {
+            handleShowBackgroundImage();
+        }
         // We just want to reset the show background image state when the layout changes, not when the image changes
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [layout]);
@@ -59,14 +70,21 @@ function SignupNodeComponent({
     const handleAlignment = (a) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setAlignment(a);
+            node.alignment = a;
+        });
+    };
+
+    const handleBackgroundSize = (a) => {
+        editor.update(() => {
+            const node = $getNodeByKey(nodeKey);
+            node.backgroundSize = a;
         });
     };
 
     const handleToolbarEdit = (event) => {
         event.preventDefault();
         event.stopPropagation();
-        editor.dispatchCommand(EDIT_CARD_COMMAND, {cardKey: nodeKey});
+        editor.dispatchCommand(EDIT_CARD_COMMAND, {cardKey: nodeKey, focusEditor: false});
     };
 
     const imageUploader = fileUploader.useFileUpload('image');
@@ -75,15 +93,17 @@ function SignupNodeComponent({
         // reset original src so it can be replaced with preview and upload progress
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setBackgroundImageSrc('');
+            node.backgroundImageSrc = '';
         });
 
         const {imageSrc} = await backgroundImageUploadHandler(files, imageUploader.upload);
 
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setBackgroundImageSrc(imageSrc);
+            node.backgroundImageSrc = imageSrc;
         });
+
+        setLastBackgroundImage(imageSrc);
     };
 
     const onFileChange = async (e) => {
@@ -95,53 +115,75 @@ function SignupNodeComponent({
     const handleLayout = (l) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setLayout(l);
+            node.layout = l;
         });
     };
 
     const handleButtonText = (event) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setButtonText(event.target.value);
+            node.buttonText = event.target.value;
         });
+    };
+
+    const handleButtonTextBlur = (event) => {
+        if (!event.target.value) {
+            editor.update(() => {
+                const node = $getNodeByKey(nodeKey);
+                node.buttonText = 'Subscribe';
+            });
+        }
     };
 
     const handleClearBackgroundImage = () => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setBackgroundImageSrc('');
+            node.backgroundImageSrc = '';
         });
     };
 
-    const handleToggleBackgroundImage = (e) => {
-        if (e.target.checked) {
-            setShowBackgroundImage(true);
+    const handleShowBackgroundImage = () => {
+        setShowBackgroundImage(true);
+
+        if (lastBackgroundImage) {
+            editor.update(() => {
+                const node = $getNodeByKey(nodeKey);
+                node.backgroundImageSrc = lastBackgroundImage;
+            });
         } else {
-            setShowBackgroundImage(false);
-            handleClearBackgroundImage();
+            openFileSelection({fileInputRef});
         }
+    };
+
+    const handleHideBackgroundImage = () => {
+        setShowBackgroundImage(false);
+        handleClearBackgroundImage();
     };
 
     const handleBackgroundColor = (color, matchingTextColor) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setBackgroundColor(color);
-            node.setTextColor(matchingTextColor);
+            node.backgroundColor = color;
+            node.textColor = matchingTextColor;
+
+            if (layout !== 'split') {
+                handleHideBackgroundImage();
+            }
         });
     };
 
     const handleTextColor = (color) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setTextColor(color);
+            node.textColor = color;
         });
     };
 
     const handleButtonColor = (color, matchingTextColor) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setButtonColor(color);
-            node.setButtonTextColor(matchingTextColor);
+            node.buttonColor = color;
+            node.buttonTextColor = matchingTextColor;
         });
     };
 
@@ -152,10 +194,18 @@ function SignupNodeComponent({
         });
     };
 
+    const handleSwapLayout = () => {
+        editor.update(() => {
+            const node = $getNodeByKey(nodeKey);
+            node.swapped = !isSwapped;
+        });
+    };
+
     useEffect(() => {
         headerTextEditor.setEditable(isEditing);
         subheaderTextEditor.setEditable(isEditing);
-    }, [isEditing, headerTextEditor, subheaderTextEditor]);
+        disclaimerTextEditor.setEditable(isEditing);
+    }, [isEditing, headerTextEditor, subheaderTextEditor, disclaimerTextEditor]);
 
     return (
         <>
@@ -164,6 +214,7 @@ function SignupNodeComponent({
                 availableLabels={availableLabels}
                 backgroundColor={backgroundColor}
                 backgroundImageSrc={backgroundImageSrc}
+                backgroundSize={backgroundSize}
                 buttonColor={buttonColor}
                 buttonText={buttonText}
                 buttonTextColor={buttonTextColor}
@@ -173,20 +224,28 @@ function SignupNodeComponent({
                 fileUploader={imageUploader}
                 handleAlignment={handleAlignment}
                 handleBackgroundColor={handleBackgroundColor}
+                handleBackgroundSize={handleBackgroundSize}
                 handleButtonColor={handleButtonColor}
                 handleButtonText={handleButtonText}
+                handleButtonTextBlur={handleButtonTextBlur}
                 handleClearBackgroundImage={handleClearBackgroundImage}
+                handleHideBackgroundImage={handleHideBackgroundImage}
                 handleLabels={handleLabels}
                 handleLayout={handleLayout}
+                handleShowBackgroundImage={handleShowBackgroundImage}
+                handleSwapLayout={handleSwapLayout}
                 handleTextColor={handleTextColor}
-                handleToggleBackgroundImage={handleToggleBackgroundImage}
                 header={header}
                 headerTextEditor={headerTextEditor}
                 headerTextEditorInitialState={headerTextEditorInitialState}
                 imageDragHandler={imageDragHandler}
                 isEditing={isEditing}
+                isPinturaEnabled={isPinturaEnabled}
+                isSwapped={isSwapped}
                 labels={labels}
                 layout={layout}
+                openImageEditor={openImageEditor}
+                setFileInputRef={ref => fileInputRef.current = ref}
                 showBackgroundImage={showBackgroundImage}
                 subheader={subheader}
                 subheaderTextEditor={subheaderTextEditor}
@@ -213,7 +272,7 @@ function SignupNodeComponent({
                         hide={!cardConfig.createSnippet}
                         icon="snippet"
                         isActive={false}
-                        label="Snippet"
+                        label="Create snippet"
                         onClick={() => setShowSnippetToolbar(true)}
                     />
                 </ToolbarMenu>

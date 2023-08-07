@@ -4,18 +4,6 @@ Early stage re-write of Ghost's editor, using Lexical as the editor framework in
 
 ## Development
 
-### Pre-requisites
-
-This package makes use of two other built packages in the monorepo, those packages will need to be built before this package's build will succeed.
-
-```
-cd packages/kg-default-nodes && yarn build
-cd ..
-cd packages/kg-clean-basic-html && yarn build
-```
-
-_Note:_ If any changes are made to those packages you'll need to rebuild them before the changes will show up in the demo site.
-
 ### Running the development version
 
 Run `yarn dev` to start the development server to test/develop the editor standalone. This will generate a demo site from the `index.html` file which renders the demo app in `demo/demo.jsx` and makes it available on http://localhost:5173
@@ -38,11 +26,8 @@ These cards make external web requests. Since the demo doesn't have a server to 
 ### Running inside Admin
 
 ```bash
-# Within koenig-lexical, start a local web server
-yarn preview --host
-
-# (optional) Within koenig-lexical, automatically rebuild upon change
-yarn build --watch
+# Within koenig-lexical, start all the build/preview steps
+yarn dev
 
 # Within Ghost, run `yarn dev` with `--lexical`
 yarn dev --lexical
@@ -88,6 +73,7 @@ We use [Vitest](https://vitest.dev) for unit tests and [Playwright](https://play
 - `yarn test` runs all tests and exits
 - `yarn test:unit` runs unit tests
 - `yarn test:unit:watch` runs unit tests and starts a test watcher that re-runs tests on file changes
+- `yarn test:unit:watch --ui` runs unit tests and opens a browser UI for exploring and re-running tests
 - `yarn test:e2e` runs e2e tests
 - `yarn test:e2e --headed` runs tests in browser so you can watch the tests execute
 - `yarn test:slowmo` same as `yarn test:e2e --headed` but adds 100ms delay between instructions to make it easier to see what's happening (note that some tests may fail or timeout due to the added delays)
@@ -126,7 +112,15 @@ JSX components in e2e tests. It can be a situation when some constants locate in
 we can move them to js file. If it is a problem in the future, we can add our implementation of the loader or 
 add an extension to all imports in the project.
 
+## Deployment
 
+To deploy the changes made in Koenig Lexical and integrate them into Ghost, follow these steps:
+
+1. Run `yarn ship` in the top-level Koenig monorepo. This command will update the editor used on Ghost by fetching the latest version from jsdelivr.
+
+2. Bump the version of `@tryghost/kg-default-nodes` in the Ghost repository. This step is necessary for rendering to work correctly with newly added or updated nodes. Failure to perform this step may result in issues when saving posts on Ghost that use the new cards.
+
+3. Run `/main` in Slack and wait for the new version to build to test on staging.
 
 ### Editor integration
 

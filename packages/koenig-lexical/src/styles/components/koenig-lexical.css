@@ -38,7 +38,7 @@
 /* Dark mode */
 .koenig-lexical > .dark, .koenig-lexical.dark, .dark .koenig-lexical {
     &:not(.kg-inherit-styles) {
-        background-color: var(--black);
+        /* background-color: var(--black); */
 
         > * {
             color: var(--grey-300);
@@ -48,6 +48,13 @@
 
 .dark ::selection {
     background: var(--grey-900);
+}
+
+/* Background fix for Koenig demo */
+.koenig-demo > .dark, .koenig-demo.dark, .dark .koenig-demo {
+    &:not(.kg-inherit-styles) {
+        background-color: var(--black);
+    }
 }
 
 .koenig-lexical.koenig-lexical-caption {
@@ -75,7 +82,7 @@ em-emoji-picker {
     --rgb-accent: 57, 64, 71;
     --rgb-color: 174, 183, 193;
     --em-rgb-accent: (255,0,0)
-    /* --rgb-input: 255, 235, 235; */
+    /* --rgb-input: 255, 235, 235; */;
     --shadow: 0 0 1px rgba(0,0,0,.05), 0 5px 18px rgba(0,0,0,.08);
 
     height: 325px;
@@ -131,12 +138,36 @@ em-emoji-picker {
 }
 
 /* Toolbar */
-[data-kg-floating-toolbar=true] .fill-white g, 
-[data-kg-floating-toolbar=true] .fill-white path {
+[data-kg-floating-toolbar=true] .fill-white g,
+[data-kg-floating-toolbar=true] .fill-white path,
+[data-kg-card-toolbar] .fill-white g,
+[data-kg-card-toolbar] .fill-white path {
     fill: #fff;
 }
 
 /* tailwind `hidden` class conflicts with ghost styles */
 .kg-cardmenu-card-hover button {
     display: none;
+}
+
+/* Table */
+.koenig-lexical table {
+    font-size: 1.75rem;
+    margin: 0;
+    font-family: georgia,Times,serif;
+    letter-spacing: .02rem;
+    line-height: 1.6em;
+}
+
+.koenig-lexical table tr td,
+.koenig-lexical table tr th {
+    vertical-align: top;
+    border-bottom: 1px solid var(--grey-200);
+}
+
+.koenig-lexical > .dark, .koenig-lexical.dark, .dark .koenig-lexical {
+    table tr td,
+    table tr th {
+        border-bottom: 1px solid var(--grey-900);
+    }
 }

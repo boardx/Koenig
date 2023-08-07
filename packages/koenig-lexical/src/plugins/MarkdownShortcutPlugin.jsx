@@ -42,7 +42,7 @@ export const CODE_BLOCK = {
         const textContent = node.getTextContent();
         return (
             '```' +
-            (node.getLanguage() || '') +
+            (node.language || '') +
             (textContent ? '\n' + textContent : '') +
             '\n' +
             '```'
@@ -85,6 +85,7 @@ export const IMAGE = {
     type: 'element'
 };
 
+// custom text format transformers
 export const SUBSCRIPT = {
     format: ['subscript'],
     tag: '~',

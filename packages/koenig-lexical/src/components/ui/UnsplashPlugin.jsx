@@ -1,6 +1,7 @@
 import KoenigComposerContext from '../../context/KoenigComposerContext.jsx';
 import React from 'react';
 import UnsplashModal from './UnsplashModal.jsx';
+import generateEditorState from '../../utils/generateEditorState';
 import {$createNodeSelection, $getNodeByKey, $setSelection} from 'lexical';
 import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
 
@@ -22,11 +23,16 @@ const UnsplashPlugin = ({nodeKey, isModalOpen = true}) => {
     const insertImageToNode = async (image) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setSrc(image.src);
-            node.setImgHeight(image.height);
-            node.setImgWidth(image.width);
-            node.setCaption(image.caption);
-            node.setAlt(image.alt);
+            node.src = image.src;
+            node.height = image.height;
+            node.width = image.width;
+            node.caption = image.caption;
+            node.alt = image.alt;
+            const editorState = generateEditorState({
+                editor: node.__captionEditor,
+                initialHtml: `<p>${image.caption}</p>`
+            });
+            node.__captionEditor.setEditorState(editorState, {tag: 'history-merge'});
             const nodeSelection = $createNodeSelection();
             nodeSelection.add(node.getKey());
             $setSelection(nodeSelection);

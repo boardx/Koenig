@@ -1,40 +1,49 @@
 import path from 'path';
-import {assertHTML, createDataTransfer, createSnippet, focusEditor, html, initialize, insertCard} from '../../utils/e2e';
+import {assertHTML, createDataTransfer, createSnippet, focusEditor, html, initialize, insertCard, isMac} from '../../utils/e2e';
 import {expect, test} from '@playwright/test';
 import {fileURLToPath} from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe('Product card', async () => {
-    test.beforeEach(async ({page}) => {
+    const ctrlOrCmd = isMac() ? 'Meta' : 'Control';
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
-    test('can import serialized product card nodes', async function ({page}) {
-        await page.evaluate(() => {
-            const serializedState = JSON.stringify({
-                root: {
-                    children: [{
-                        type: 'product',
-                        productImageSrc: '/content/images/2022/11/koenig-lexical.jpg',
-                        productTitle: '<span>This is <em>title</em></span>',
-                        productDescription: '<p dir="ltr"><span>Description</span></p>',
-                        productUrl: 'https://google.com/',
-                        productButton: 'Button',
-                        productButtonEnabled: true,
-                        productRatingEnabled: true
-                    }],
-                    direction: null,
-                    format: '',
-                    indent: 0,
-                    type: 'root',
-                    version: 1
-                }
-            });
-            const editor = window.lexicalEditor;
-            const editorState = editor.parseEditorState(serializedState);
-            editor.setEditorState(editorState);
-        });
+    test.afterAll(async () => {
+        await page.close();
+    });
+
+    test('can import serialized product card nodes', async function () {
+        const contentParam = encodeURIComponent(JSON.stringify({
+            root: {
+                children: [{
+                    type: 'product',
+                    productImageSrc: '/content/images/2022/11/koenig-lexical.jpg',
+                    productTitle: '<span>This is <em>title</em></span>',
+                    productDescription: '<p dir="ltr"><span>Description</span></p>',
+                    productUrl: 'https://google.com/',
+                    productButton: 'Button',
+                    productButtonEnabled: true,
+                    productRatingEnabled: true,
+                    productStarRating: 4
+                }],
+                direction: null,
+                format: '',
+                indent: 0,
+                type: 'root',
+                version: 1
+            }
+        }));
+
+        await initialize({page, uri: `/#/?content=${contentParam}`});
 
         await assertHTML(page, html`
             <div data-lexical-decorator="true" contenteditable="false">
@@ -50,9 +59,11 @@ test.describe('Product card', async () => {
                                     <div data-kg="editor">
                                         <div
                                             contenteditable="false"
+                                            role="textbox"
                                             spellcheck="true"
                                             data-lexical-editor="true"
-                                            aria-autocomplete="none">
+                                            aria-autocomplete="none"
+                                            aria-readonly="true">
                                             <p dir="ltr">
                                                 <span data-lexical-text="true">This is</span>
                                                 <em data-lexical-text="true">title</em>
@@ -74,9 +85,11 @@ test.describe('Product card', async () => {
                                 <div data-kg="editor">
                                     <div
                                         contenteditable="false"
+                                        role="textbox"
                                         spellcheck="true"
                                         data-lexical-editor="true"
-                                        aria-autocomplete="none">
+                                        aria-autocomplete="none"
+                                        aria-readonly="true">
                                         <p dir="ltr"><span data-lexical-text="true">Description</span></p>
                                     </div>
                                 </div>
@@ -92,7 +105,7 @@ test.describe('Product card', async () => {
             `, {ignoreCardToolbarContents: true, ignoreInnerSVG: true});
     });
 
-    test('renders product card node', async function ({page}) {
+    test('renders product card node', async function () {
         await focusEditor(page);
         await insertCard(page, {cardName: 'product'});
 
@@ -104,7 +117,7 @@ test.describe('Product card', async () => {
         `, {ignoreCardContents: true});
     });
 
-    test('can upload image file', async function ({page}) {
+    test('can upload image file', async function () {
         await focusEditor(page);
         await insertCard(page, {cardName: 'product'});
         await uploadImg(page);
@@ -120,7 +133,7 @@ test.describe('Product card', async () => {
         await expect(await page.getByTestId('media-placeholder')).toBeVisible();
     });
 
-    test('can show errors for failed image upload', async function ({page}) {
+    test('can show errors for failed image upload', async function () {
         await focusEditor(page);
         await insertCard(page, {cardName: 'product'});
         await uploadImg(page, 'large-image-fail.jpeg');
@@ -129,7 +142,7 @@ test.describe('Product card', async () => {
         await expect(await page.getByTestId('media-placeholder-errors')).toBeVisible();
     });
 
-    test('can upload dropped image', async function ({page}) {
+    test('can upload dropped image', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
 
         await focusEditor(page);
@@ -152,7 +165,7 @@ test.describe('Product card', async () => {
         await expect(await page.getByTestId('product-card-image')).toBeVisible();
     });
 
-    test('can show errors if was dropped a file with wrong extension', async function ({page}) {
+    test('can show errors if was dropped a file with wrong extension', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image-fail.jpeg');
 
         await focusEditor(page);
@@ -175,7 +188,7 @@ test.describe('Product card', async () => {
         await expect(await page.getByTestId('media-placeholder-errors')).toBeVisible();
     });
 
-    test('can show/hide rating starts if rating enabled/disabled', async function ({page}) {
+    test('can show/hide rating starts if rating enabled/disabled', async function () {
         await focusEditor(page);
         await insertCard(page, {cardName: 'product'});
 
@@ -193,7 +206,7 @@ test.describe('Product card', async () => {
         await expect(productStars).toBeVisible();
     });
 
-    test('can show/hide button if button settings was enabled/disabled', async function ({page}) {
+    test('can show/hide button if button settings was enabled/disabled', async function () {
         await focusEditor(page);
         await insertCard(page, {cardName: 'product'});
 
@@ -221,7 +234,7 @@ test.describe('Product card', async () => {
         await expect(await button.getAttribute('href')).toEqual('https://google.com/');
     });
 
-    test('can fill title and description', async ({page}) => {
+    test('can fill title and description', async () => {
         await focusEditor(page);
         await insertCard(page, {cardName: 'product'});
         await page.keyboard.type('Title');
@@ -261,9 +274,10 @@ test.describe('Product card', async () => {
                                     <div data-kg="editor">
                                         <div
                                             contenteditable="true"
+                                            role="textbox"
                                             spellcheck="true"
                                             data-lexical-editor="true"
-                                            role="textbox">
+                                        >
                                             <p dir="ltr"><span data-lexical-text="true">Title</span></p>
                                         </div>
                                     </div>
@@ -275,9 +289,10 @@ test.describe('Product card', async () => {
                                 <div data-kg="editor">
                                     <div
                                         contenteditable="true"
+                                        role="textbox"
                                         spellcheck="true"
                                         data-lexical-editor="true"
-                                        role="textbox">
+                                    >
                                         <p dir="ltr"><span data-lexical-text="true">Description</span></p>
                                     </div>
                                 </div>
@@ -313,7 +328,7 @@ test.describe('Product card', async () => {
             `, {ignoreCardToolbarContents: true, ignoreInnerSVG: true});
     });
 
-    test('can add snippet', async function ({page}) {
+    test('can add snippet', async function () {
         await focusEditor(page);
         // insert new card
         await insertCard(page, {cardName: 'product'});
@@ -334,7 +349,7 @@ test.describe('Product card', async () => {
         await expect(await page.locator('[data-kg-card="product"]')).toHaveCount(2);
     });
 
-    test('renders product card toolbar', async ({page}) => {
+    test('renders product card toolbar', async () => {
         await focusEditor(page);
         await insertCard(page, {cardName: 'product'});
         await page.keyboard.type('Title');
@@ -356,6 +371,85 @@ test.describe('Product card', async () => {
             </div>
             <p><br /></p>
         `, {ignoreCardContents: true});
+    });
+
+    test('can undo/redo without losing nested editor content', async () => {
+        await focusEditor(page);
+        await insertCard(page, {cardName: 'product'});
+
+        await page.keyboard.type('Test title');
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('Test description');
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.press(`${ctrlOrCmd}+z`);
+
+        await assertHTML(page, html`
+            <div data-lexical-decorator="true" contenteditable="false">
+                <div
+                    data-kg-card-editing="false"
+                    data-kg-card-selected="false"
+                    data-kg-card="product">
+                    <div>
+                        <div>
+                            <div>
+                                <div>
+                                    <button name="placeholder-button" type="button">
+                                        <svg></svg>
+                                        <p></p>
+                                    </button>
+                                </div>
+                            </div>
+                            <form>
+                                <input
+                                    accept="image/gif,image/jpg,image/jpeg,image/png,image/svg+xml,image/webp"
+                                    hidden=""
+                                    name="image-input"
+                                    type="file" />
+                            </form>
+                        </div>
+                        <div>
+                            <div>
+                                <div>
+                                    <div data-kg="editor">
+                                        <div
+                                            contenteditable="false"
+                                            role="textbox"
+                                            spellcheck="true"
+                                            data-lexical-editor="true"
+                                            aria-autocomplete="none"
+                                            aria-readonly="true">
+                                            <p dir="ltr">
+                                                <span data-lexical-text="true">Test title</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div>
+                                <div data-kg="editor">
+                                    <div
+                                        contenteditable="false"
+                                        role="textbox"
+                                        spellcheck="true"
+                                        data-lexical-editor="true"
+                                        aria-autocomplete="none"
+                                        aria-readonly="true">
+                                        <p dir="ltr">
+                                            <span data-lexical-text="true">Test description</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div></div>
+                </div>
+            </div>
+            <p><br /></p>
+        `, {ignoreCardToolbarContents: true, ignoreInnerSVG: true});
     });
 });
 

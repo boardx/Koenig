@@ -39,7 +39,7 @@ import {
     $selectDecoratorNode,
     getTopLevelNativeElement
 } from '../utils/';
-import {$isKoenigCard} from '@tryghost/kg-default-nodes';
+import {$isKoenigCard, ImageNode} from '@tryghost/kg-default-nodes';
 import {$isListItemNode, $isListNode, ListNode} from '@lexical/list';
 import {MIME_TEXT_HTML, MIME_TEXT_PLAIN, PASTE_MARKDOWN_COMMAND} from './MarkdownPastePlugin.jsx';
 import {mergeRegister} from '@lexical/utils';
@@ -108,6 +108,12 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
     // deselect cards on mousedown outside of the editor container
     React.useEffect(() => {
         const onMousedown = (event) => {
+            if (!document.body.contains(event.target)) {
+                // The event target is no longer in the DOM
+                // This is possible if we have listeners in the capture phase of the event (e.g. dropdowns)
+                return;
+            }
+
             if (containerElem.current && !containerElem.current.contains(event.target)) {
                 editor.update(() => {
                     const selection = $getSelection();
@@ -246,11 +252,11 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
             ),
             editor.registerCommand(
                 EDIT_CARD_COMMAND,
-                ({cardKey}) => {
+                ({cardKey, focusEditor}) => {
                     if (selectedCardKey && selectedCardKey !== cardKey) {
                         $deselectCard(editor, selectedCardKey);
                     }
-                    $selectCard(editor, cardKey);
+                    $selectCard(editor, cardKey, focusEditor);
 
                     setSelectedCardKey(cardKey);
 
@@ -356,11 +362,10 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                         }
                     }
 
-                    // avoid processing card behaviours when an inner card element has focus
+                    // let the browser handle selection when in a card inner element (e.g. nested editor)
                     // NOTE: must come after ctrl/cmd+enter because that always toggles no matter the selection
-
                     if (!event._fromNested && document.activeElement !== editor.getRootElement()) {
-                        return false;
+                        return true;
                     }
 
                     // if a card is selected, insert a new paragraph after it
@@ -373,21 +378,24 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                         return true;
                     }
 
+                    // code card shortcut
                     if (!isNested) {
                         const selection = $getSelection();
                         const currentNode = selection.getNodes()[0];
-                        const textContent = currentNode.getTextContent();
-                        if (textContent.match(/^```(\w{1,10})/)) {
-                            event.preventDefault();
-                            const language = textContent.replace(/^```/,'');
-                            const replacementNode = currentNode.getTopLevelElement().insertAfter($createCodeBlockNode({language, _openInEditMode: true}));
-                            currentNode.getTopLevelElement().remove();
+                        if ($isTextNode(currentNode)) {
+                            const textContent = currentNode.getTextContent();
+                            if (textContent.match(/^```(\w{1,10})?/)) {
+                                event.preventDefault();
+                                const language = textContent.replace(/^```/,'');
+                                const replacementNode = currentNode.getTopLevelElement().insertAfter($createCodeBlockNode({language, _openInEditMode: true}));
+                                currentNode.getTopLevelElement().remove();
 
-                            // select node when replacing so it immediately renders in editing mode
-                            const replacementSelection = $createNodeSelection();
-                            replacementSelection.add(replacementNode.getKey());
-                            $setSelection(replacementSelection);
-                            return true;
+                                // select node when replacing so it immediately renders in editing mode
+                                const replacementSelection = $createNodeSelection();
+                                replacementSelection.add(replacementNode.getKey());
+                                $setSelection(replacementSelection);
+                                return true;
+                            }
                         }
                     }
                 },
@@ -397,11 +405,16 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                 KEY_ARROW_UP_COMMAND,
                 (event) => {
                     // stick to default behaviour if a selection is being made
-                    if (event.shiftKey) {
+                    if (event?.shiftKey) {
                         return false;
                     }
 
-                    // avoid processing card behaviours when an inner element has focus
+                    // if we're in a nested editor, we need to move selection back to the parent editor
+                    if (event?._fromCaptionEditor) {
+                        $selectCard(editor, selectedCardKey);
+                    }
+
+                    // avoid processing card behaviours when an inner element has focus (e.g. nested editors)
                     if (document.activeElement !== editor.getRootElement()) {
                         return true;
                     }
@@ -430,7 +443,7 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                     }
 
                     if ($isRangeSelection(selection)) {
-                        if (selection.isCollapsed) {
+                        if (selection.isCollapsed()) {
                             const topLevelElement = selection.anchor.getNode().getTopLevelElement();
                             const nativeSelection = window.getSelection();
 
@@ -480,7 +493,12 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                         return false;
                     }
 
-                    // avoid processing card behaviours when an inner element has focus
+                    // if we're in a nested editor, we need to move selection back to the parent editor
+                    if (event?._fromCaptionEditor) {
+                        $selectCard(editor, selectedCardKey);
+                    }
+
+                    // avoid processing card behaviours when an inner element has focus (e.g. nested editors)
                     if (document.activeElement !== editor.getRootElement()) {
                         return true;
                     }
@@ -512,7 +530,7 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                     }
 
                     if ($isRangeSelection(selection)) {
-                        if (selection.isCollapsed) {
+                        if (selection.isCollapsed()) {
                             const topLevelElement = selection.anchor.getNode().getTopLevelElement();
                             const nativeSelection = window.getSelection();
                             const nativeTopLevelElement = getTopLevelNativeElement(nativeSelection.anchorNode);
@@ -540,11 +558,14 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                                 const rects = range.getClientRects();
 
                                 if (rects.length > 0) {
-                                    const rangeRect = rects[0];
+                                    // rects.length will be 2 if at the start/end of a line and we should default to the new/second line for
+                                    //  determining if a card is below the cursor
+                                    const rangeRect = rects.length > 1 ? rects[1] : rects[0];
                                     const elemRect = nativeTopLevelElement.getBoundingClientRect();
 
                                     if (Math.abs(rangeRect.bottom - elemRect.bottom) < RANGE_TO_ELEMENT_BOUNDARY_THRESHOLD_PX) {
                                         const nextSibling = topLevelElement.getNextSibling();
+                                        // console.log(`nextSibling`,nextSibling)
                                         if ($isDecoratorNode(nextSibling)) {
                                             $selectDecoratorNode(nextSibling);
                                             return true;
@@ -580,9 +601,7 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                                 cursorDidExitAtTop?.();
                                 return true;
                             }
-                        }
-
-                        if (selection.isCollapsed && $isAtStartOfDocument(selection)) {
+                        } else if ($isAtStartOfDocument(selection)) {
                             event.preventDefault();
                             cursorDidExitAtTop();
                             return true;
@@ -681,6 +700,46 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                         }
                     }
 
+                    const {metaKey, code} = event;
+                    if (metaKey && code === 'KeyA') {
+                        const selection = $getSelection();
+                        if ($isRangeSelection(selection)) {
+                            const root = $getRoot();
+                            const firstNode = root.getFirstChildOrThrow();
+                            const lastNode = root.getLastChildOrThrow();
+                  
+                            if (firstNode && lastNode) {
+                                if (!$isDecoratorNode(firstNode) && !firstNode.isEmpty()) {
+                                    const firstChild = firstNode.getFirstChild();
+                                    if ($isTextNode(firstChild)) {
+                                        selection.anchor.set(firstChild.getKey(), 0, 'text');
+                                    }
+                                } else {
+                                    selection.anchor.set('root', 0, 'element');
+                                }
+                  
+                                if (!$isDecoratorNode(lastNode) && !lastNode.isEmpty()) {
+                                    const lastChild = lastNode.getLastChild();
+                                    if ($isTextNode(lastChild)) {
+                                        selection.focus.set(
+                                            lastChild.getKey(),
+                                            lastChild.getTextContentSize(),
+                                            'text',
+                                        );
+                                    }
+                                } else {
+                                    selection.focus.set(
+                                        'root',
+                                        lastNode.getIndexWithinParent() + 1,
+                                        'element',
+                                    );
+                                }
+                                event.preventDefault();
+                                return true;
+                            }
+                        }
+                    }
+
                     return false;
                 },
                 COMMAND_PRIORITY_LOW
@@ -704,7 +763,7 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                     const selection = $getSelection();
 
                     if ($isRangeSelection(selection)) {
-                        if (selection.isCollapsed) {
+                        if (selection.isCollapsed()) {
                             const anchor = selection.anchor;
                             const anchorNode = anchor.getNode();
                             const topLevelElement = anchorNode.getTopLevelElement();
@@ -776,7 +835,7 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                     // handle card selection around card boundaries
                     const selection = $getSelection();
                     if ($isRangeSelection(selection)) {
-                        if (selection.isCollapsed) {
+                        if (selection.isCollapsed()) {
                             const anchor = selection.anchor;
                             const anchorNode = anchor.getNode();
                             const topLevelElement = anchorNode.getTopLevelElement();
@@ -831,7 +890,7 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                     // Instead, we remove the topLevelElement and put the selection on the sibling card
                     const selection = $getSelection();
                     if ($isRangeSelection(selection)) {
-                        if (selection.isCollapsed) {
+                        if (selection.isCollapsed()) {
                             const anchor = selection.anchor;
                             const anchorNode = anchor.getNode();
                             const topLevelElement = anchorNode.getTopLevelElement();
@@ -875,7 +934,7 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                         }
 
                         let nodes;
-                        if (selection.isCollapsed) {
+                        if (selection.isCollapsed()) {
                             const anchorNode = selection.anchor.getNode();
                             nodes = $isTextNode(anchorNode) ? [anchorNode.getParent()] : [anchorNode];
                         } else {
@@ -892,6 +951,27 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                             event.preventDefault();
                             cursorDidExitAtTop();
                             return true;
+                        }
+                    }
+
+                    // code card shortcut
+                    if (!isNested) {
+                        const selection = $getSelection();
+                        const currentNode = selection.getNodes()[0];
+                        if ($isTextNode(currentNode)) {
+                            const textContent = currentNode.getTextContent();
+                            if (textContent.match(/^```(\w{1,10})?/)) {
+                                event.preventDefault();
+                                const language = textContent.replace(/^```/,'');
+                                const replacementNode = currentNode.getTopLevelElement().insertAfter($createCodeBlockNode({language, _openInEditMode: true}));
+                                currentNode.getTopLevelElement().remove();
+
+                                // select node when replacing so it immediately renders in editing mode
+                                const replacementSelection = $createNodeSelection();
+                                replacementSelection.add(replacementNode.getKey());
+                                $setSelection(replacementSelection);
+                                return true;
+                            }
                         }
                     }
                 },
@@ -953,6 +1033,20 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                         }
                         return true;
                     }
+
+                    // if a link is pasted in a populated text node, insert a link
+                    if (nodeContent.length > 0) {
+                        const textNode = selection.extract()[0];
+                        const parentNode = textNode.getParent();
+                        const link = linkMatch[1];
+                        const linkNode = $createLinkNode(link);
+                        const linkTextNode = $createTextNode(link);
+                        linkNode.append(linkTextNode);
+                        parentNode.append(linkNode);
+                        parentNode.selectEnd();
+                        return true;
+                    }
+
                     // if a link is pasted in a blank text node, insert an embed card (may turn into bookmark)
                     if (!selectionContent.length > 0 && !nodeContent.length > 0) {
                         const url = linkMatch[1];
@@ -982,6 +1076,28 @@ function useKoenigBehaviour({editor, containerElem, cursorDidExitAtTop, isNested
                     node.append(...nextSibling.getChildren());
                     nextSibling.remove();
                 }
+            })
+        );
+    }, [editor]);
+
+    React.useEffect(() => {
+        if (!editor.hasNodes([ImageNode])) {
+            return;
+        }
+        return mergeRegister(
+            // make sure ImageNode is a top-level node
+            editor.registerNodeTransform(ImageNode, (node) => {
+                // return if ImageNode is already a top-level node
+                if (node.getParent() === $getRoot()) {
+                    return;
+                }
+
+                let parent = node;
+                while (parent.getParent() !== $getRoot()) {
+                    parent = parent.getParent();
+                }
+
+                parent.insertAfter(node);
             })
         );
     }, [editor]);

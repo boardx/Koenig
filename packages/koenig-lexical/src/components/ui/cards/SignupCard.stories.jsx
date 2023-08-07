@@ -1,5 +1,5 @@
 import React from 'react';
-import populateNestedEditor from '../../../utils/populateNestedEditor';
+import populateEditor from '../../../utils/storybook/populate-storybook-editor';
 import {CardWrapper} from './../CardWrapper';
 import {MINIMAL_NODES} from '../../../index.js';
 import {SignupCard} from './SignupCard';
@@ -49,13 +49,13 @@ const Template = ({display, heading, subheader, disclaimer, ...args}) => {
     const disclaimerTextEditor = createEditor({nodes: MINIMAL_NODES});
     const cardWidth = args.layout === 'split' ? 'full' : args.layout;
 
-    populateNestedEditor({editor: headerTextEditor, initialHtml: `<p>${heading}</p>`});
-    populateNestedEditor({editor: subheaderTextEditor, initialHtml: `<p>${subheader}</p>`});
-    populateNestedEditor({editor: disclaimerTextEditor, initialHtml: `<p>${disclaimer}</p>`});
+    populateEditor({editor: headerTextEditor, initialHtml: `<p>${heading}</p>`});
+    populateEditor({editor: subheaderTextEditor, initialHtml: `<p>${subheader}</p>`});
+    populateEditor({editor: disclaimerTextEditor, initialHtml: `<p>${disclaimer}</p>`});
 
     return (<div className="kg-prose">
         <div className="mx-auto my-8 min-w-[initial] max-w-[740px]">
-            <CardWrapper {...display} {...args} cardWidth={cardWidth}>
+            <CardWrapper {...display} cardWidth={cardWidth}>
                 <SignupCard
                     {...display}
                     {...args}
@@ -66,6 +66,23 @@ const Template = ({display, heading, subheader, disclaimer, ...args}) => {
             </CardWrapper>
         </div>
     </div>);
+};
+
+export const Default = Template.bind({});
+Default.args = {
+    display: 'Editing',
+    layout: 'wide',
+    alignment: 'left',
+    showBackgroundImage: false,
+    heading: 'Sign up for Koenig Lexical',
+    subheader: `There's a whole lot to discover in this editor. Let us help you settle in.`,
+    disclaimer: 'No spam. Unsubscribe anytime.',
+    buttonText: '',
+    buttonColor: 'accent',
+    buttonTextColor: '#FFFFFF',
+    backgroundColor: '#F0F0F0',
+    textColor: '#000000',
+    availableLabels: ['First label', 'Second label']
 };
 
 export const Empty = Template.bind({});
@@ -79,8 +96,10 @@ Empty.args = {
     disclaimer: '',
     buttonText: '',
     buttonColor: '#ffffff',
-    backgroundColor: '#ff0095',
-    availableLabels: [{id: '1',name: 'First label'},{id: '2',name: 'Second label'}],
+    buttonTextColor: '#000000',
+    backgroundColor: 'transparent',
+    textColor: '',
+    availableLabels: ['First label', 'Second label'],
     headerTextEditorInitialState: editorEmptyState,
     subheaderTextEditorInitialState: editorEmptyState,
     disclaimerTextEditorInitialState: editorEmptyState
@@ -98,6 +117,9 @@ Populated.args = {
     disclaimer: 'And here is some disclaimer text.',
     buttonText: 'Subscribe',
     buttonColor: '#000000',
+    buttonTextColor: '#ffffff',
     backgroundColor: '#F3B389',
-    availableLabels: [{id: '1',name: 'First label'},{id: '2',name: 'Second label'}]
+    textColor: '#000000',
+    availableLabels: ['First label', 'Second label'],
+    handleBackgroundColor: () => {}
 };

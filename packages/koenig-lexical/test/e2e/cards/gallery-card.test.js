@@ -1,56 +1,63 @@
 import path from 'path';
-import {assertHTML, createDataTransfer, focusEditor, html, initialize, insertCard} from '../../utils/e2e';
+import {assertHTML, createDataTransfer, ctrlOrCmd, focusEditor, html, initialize, insertCard} from '../../utils/e2e';
 import {expect, test} from '@playwright/test';
 import {fileURLToPath} from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe('Gallery card', async () => {
-    test.beforeEach(async ({page}) => {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
-    test('can import serialized gallery card nodes', async function ({page}) {
-        await page.evaluate(() => {
-            const serializedState = JSON.stringify({
-                root: {
-                    children: [{
-                        type: 'gallery',
-                        version: 1,
-                        images: [{
-                            row: 0,
-                            fileName: 'retreat-1.jpg',
-                            src: '/content/images/2023/04/retreat-1.jpg',
-                            width: 3840,
-                            height: 2160,
-                            title: 'Title 1',
-                            alt: 'Alt 1',
-                            caption: 'This is the <b>first caption</b>'
-                        }, {
-                            row: 0,
-                            fileName: 'retreat-2.jpg',
-                            src: '/content/images/2023/04/retreat-2.jpg',
-                            width: 3840,
-                            height: 2160,
-                            title: 'Title 2',
-                            alt: 'Alt 2',
-                            caption: 'This is another caption'
-                        }]
-                    }],
-                    direction: null,
-                    format: '',
-                    indent: 0,
-                    type: 'root',
-                    version: 1
-                }
-            });
-            const editor = window.lexicalEditor;
-            const editorState = editor.parseEditorState(serializedState);
-            editor.setEditorState(editorState);
-        });
+    test.afterAll(async () => {
+        await page.close();
+    });
+
+    test('can import serialized gallery card nodes', async function () {
+        const contentParam = encodeURIComponent(JSON.stringify({
+            root: {
+                children: [{
+                    type: 'gallery',
+                    version: 1,
+                    images: [{
+                        row: 0,
+                        fileName: 'retreat-1.jpg',
+                        src: '/content/images/2023/04/retreat-1.jpg',
+                        width: 3840,
+                        height: 2160,
+                        title: 'Title 1',
+                        alt: 'Alt 1',
+                        caption: 'This is the <b>first caption</b>'
+                    }, {
+                        row: 0,
+                        fileName: 'retreat-2.jpg',
+                        src: '/content/images/2023/04/retreat-2.jpg',
+                        width: 3840,
+                        height: 2160,
+                        title: 'Title 2',
+                        alt: 'Alt 2',
+                        caption: 'This is another caption'
+                    }]
+                }],
+                direction: null,
+                format: '',
+                indent: 0,
+                type: 'root',
+                version: 1
+            }
+        }));
+
+        await initialize({page, uri: `/#/?content=${contentParam}`});
 
         await assertHTML(page, html`
-            <div data-lexical-decorator="true" contenteditable="false">
+            <div data-lexical-decorator="true" contenteditable="false" data-kg-card-width="wide">
                 <div data-kg-card-editing="false" data-kg-card-selected="false" data-kg-card="gallery">
                     <figure>
                         <div>
@@ -97,12 +104,12 @@ test.describe('Gallery card', async () => {
         `);
     });
 
-    test('can insert gallery card', async function ({page}) {
+    test('can insert gallery card', async function () {
         await focusEditor(page);
         await insertCard(page, {cardName: 'gallery'});
 
         await assertHTML(page, html`
-            <div data-lexical-decorator="true" contenteditable="false">
+            <div data-lexical-decorator="true" contenteditable="false" data-kg-card-width="wide">
                 <div data-kg-card-editing="false" data-kg-card-selected="true" data-kg-card="gallery">
                     <figure>
                         <div>
@@ -127,7 +134,7 @@ test.describe('Gallery card', async () => {
                             <div>
                                 <div>
                                     <div data-kg="editor">
-                                        <div contenteditable="true" spellcheck="true" data-lexical-editor="true" role="textbox">
+                                        <div contenteditable="true" role="textbox" spellcheck="true" data-lexical-editor="true">
                                             <p><br /></p>
                                         </div>
                                     </div>
@@ -142,7 +149,7 @@ test.describe('Gallery card', async () => {
         `);
     });
 
-    test('can upload images', async function ({page}) {
+    test('can upload images', async function () {
         const fileChooserPromise = page.waitForEvent('filechooser');
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.jpeg');
 
@@ -156,7 +163,7 @@ test.describe('Gallery card', async () => {
         await page.waitForSelector('[data-gallery="true"]');
 
         await assertHTML(page, html`
-            <div data-lexical-decorator="true" contenteditable="false">
+            <div data-lexical-decorator="true" contenteditable="false" data-kg-card-width="wide">
                 <div data-kg-card-editing="false" data-kg-card-selected="true" data-kg-card="gallery">
                     <figure>
                         <div>
@@ -188,7 +195,7 @@ test.describe('Gallery card', async () => {
                             <div>
                                 <div>
                                     <div data-kg="editor">
-                                        <div contenteditable="true" spellcheck="true" data-lexical-editor="true" role="textbox">
+                                        <div contenteditable="true" role="textbox" spellcheck="true" data-lexical-editor="true">
                                             <p><br /></p>
                                         </div>
                                     </div>
@@ -204,7 +211,7 @@ test.describe('Gallery card', async () => {
         `, {ignoreCardToolbarContents: true});
     });
 
-    test('can drop images when empty', async function ({page}) {
+    test('can drop images when empty', async function () {
         const firstImagePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.jpeg');
         const secondImagePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
 
@@ -228,7 +235,7 @@ test.describe('Gallery card', async () => {
         await expect(page.locator('[data-testid="gallery-image"]')).toHaveCount(2);
     });
 
-    test('can drop images when populated', async function ({page}) {
+    test('can drop images when populated', async function () {
         const prePopulatedImagePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.jpeg');
         const fileChooserPromise = page.waitForEvent('filechooser');
 
@@ -262,7 +269,7 @@ test.describe('Gallery card', async () => {
         await expect(page.locator('[data-testid="gallery-image"]')).toHaveCount(3);
     });
 
-    test('limits uploads to 9 images', async function ({page}) {
+    test('limits uploads to 9 images', async function () {
         const filePaths = Array.from(Array(10).keys()).map(n => path.relative(process.cwd(), __dirname + `/../fixtures/large-image-${n}.png`));
         const fileChooserPromise = page.waitForEvent('filechooser');
 
@@ -281,7 +288,7 @@ test.describe('Gallery card', async () => {
         await expect(page.getByTestId('gallery-error')).not.toBeVisible();
     });
 
-    test('can add images via toolbar', async function ({page}) {
+    test('can add images via toolbar', async function () {
         await focusEditor(page);
         await insertCard(page, {cardName: 'gallery'});
 
@@ -302,5 +309,92 @@ test.describe('Gallery card', async () => {
         await fileChooser.setFiles([filePath]);
 
         await expect(page.locator('[data-testid="gallery-image"]')).toHaveCount(2);
+    });
+
+    test('can undo/redo without losing nested editor content', async () => {
+        await test.step('insert and upload images to gallery card', async () => {
+            const filePaths = Array.from(Array(2).keys()).map(n => path.relative(process.cwd(), __dirname + `/../fixtures/large-image-${n}.png`));
+            const fileChooserPromise = page.waitForEvent('filechooser');
+
+            await focusEditor(page);
+            await insertCard(page, {cardName: 'gallery'});
+            await page.click('[name="placeholder-button"]');
+
+            const fileChooser = await fileChooserPromise;
+            await fileChooser.setFiles(filePaths);
+
+            await expect(page.locator('[data-testid="gallery-image"]')).toHaveCount(2);
+        });
+
+        await page.click('[data-testid="gallery-card-caption"]');
+        await page.keyboard.type('Caption');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.press('Backspace');
+        await expect(page.locator('[data-testid="gallery-image"]')).toHaveCount(0);
+        await page.keyboard.press(`${ctrlOrCmd()}+z`);
+
+        await assertHTML(page, html`
+            <div data-lexical-decorator="true" contenteditable="false" data-kg-card-width="wide">
+                <div data-kg-card-editing="false" data-kg-card-selected="true" data-kg-card="gallery">
+                    <figure>
+                        <div>
+                            <div data-gallery="true">
+                                <div data-row="0">
+                                    <div data-image="true">
+                                        <img
+                                            height="248"
+                                            src="blob:..."
+                                            width="248" />
+                                        <div>
+                                            <div>
+                                                <button type="button"><svg></svg></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div data-image="true">
+                                        <img
+                                            height="248"
+                                            src="blob:..."
+                                            width="248" />
+                                        <div>
+                                            <div>
+                                                <button type="button"><svg></svg></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <form>
+                                <input
+                                    accept="image/gif,image/jpg,image/jpeg,image/png,image/svg+xml,image/webp"
+                                    hidden=""
+                                    multiple=""
+                                    name="image-input"
+                                    type="file" />
+                            </form>
+                        </div>
+                        <figcaption>
+                          <div>
+                            <div>
+                              <div data-kg="editor">
+                                <div
+                                  contenteditable="true"
+                                  role="textbox"
+                                  spellcheck="true"
+                                  data-lexical-editor="true"
+                                >
+                                  <p dir="ltr"><span data-lexical-text="true">Caption</span></p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </figcaption>
+                    </figure>
+                    <div data-kg-card-toolbar="gallery"></div>
+                </div>
+            </div>
+            <p><br /></p>
+        `, {ignoreCardToolbarContents: true, ignoreInnerSVG: true});
     });
 });

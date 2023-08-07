@@ -94,7 +94,7 @@ function PopulatedVideoCard({
                         {!isLoopChecked && (
                             <MediaUploadSetting
                                 alt='Custom thumbnail'
-                                borderStyle={'rounded border-dashed border-grey/40'}
+                                borderStyle={'dashed'}
                                 dataTestId="custom-thumbnail-replace"
                                 errors={customThumbnailUploader.errors}
                                 icon='file'
@@ -191,7 +191,7 @@ export function VideoCard({
 
 VideoCard.propTypes = {
     captionEditor: PropTypes.object,
-    captionEditorInitialState: PropTypes.string,
+    captionEditorInitialState: PropTypes.object,
     isSelected: PropTypes.bool,
     isEditing: PropTypes.bool
 };

@@ -1,5 +1,14 @@
 import path from 'path';
-import {assertHTML, createDataTransfer, createSnippet, focusEditor, html, initialize, insertCard} from '../../utils/e2e';
+import {
+    assertHTML,
+    createDataTransfer,
+    createSnippet,
+    ctrlOrCmd,
+    focusEditor,
+    html,
+    initialize,
+    insertCard
+} from '../../utils/e2e';
 import {expect, test} from '@playwright/test';
 import {fileURLToPath} from 'url';
 const __filename = fileURLToPath(import.meta.url);
@@ -9,44 +18,97 @@ const __dirname = path.dirname(__filename);
 // Need to get video thumbnail before uploading on the server; for this purpose, convert video to blob https://github.com/TryGhost/Koenig/blob/a04c59c2d81ddc783869c47653aa9d7adf093629/packages/koenig-lexical/src/utils/extractVideoMetadata.js#L45
 // The problem is that Chromium can't read video src as blob
 test.describe('Video card', async () => {
-    test.beforeEach(async ({page}) => {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
-    test('can import serialized video card nodes', async function ({page}) {
-        await page.evaluate(() => {
-            const serializedState = JSON.stringify({
-                root: {
-                    children: [{
-                        type: 'video',
-                        src: '/content/images/2022/11/koenig-lexical.jpg',
-                        width: 100,
-                        height: 100,
-                        title: 'This is a title',
-                        duration: 60,
-                        thumbnailSrc: '/content/images/2022/12/koenig-lexical.png'
-                    }],
-                    direction: null,
-                    format: '',
-                    indent: 0,
-                    type: 'root',
-                    version: 1
-                }
-            });
-            const editor = window.lexicalEditor;
-            const editorState = editor.parseEditorState(serializedState);
-            editor.setEditorState(editorState);
-        });
+    test.afterAll(async () => {
+        await page.close();
+    });
+
+    test('can import serialized video card nodes', async function () {
+        const contentParam = encodeURIComponent(JSON.stringify({
+            root: {
+                children: [{
+                    type: 'video',
+                    src: '/content/images/2022/11/koenig-lexical.jpg',
+                    width: 100,
+                    height: 100,
+                    caption: 'This is a caption',
+                    duration: 60,
+                    thumbnailSrc: '/content/images/2022/12/koenig-lexical.png'
+                }],
+                direction: null,
+                format: '',
+                indent: 0,
+                type: 'root',
+                version: 1
+            }
+        }));
+
+        await initialize({page, uri: `/#/?content=${contentParam}`});
 
         await assertHTML(page, html`
             <div data-lexical-decorator="true" contenteditable="false">
                 <div data-kg-card-editing="false" data-kg-card-selected="false" data-kg-card="video">
+                    <figure>
+                        <div>
+                          <div>
+                            <img
+                              alt="Video thumbnail"
+                              src="/content/images/2022/12/koenig-lexical.png" />
+                          </div>
+                          <div>
+                            <button type="button"><svg></svg></button>
+                          </div>
+                          <div>
+                            <div>
+                              <svg></svg>
+                              <div>
+                                <span>0:00</span>
+                                /
+                                <span>1:00</span>
+                              </div>
+                              <div><button type="button"></button></div>
+                              <button type="button">1×</button>
+                              <button type="button"><svg></svg></button>
+                              <div>
+                                <div></div>
+                                <button type="button"></button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <figcaption>
+                          <div>
+                            <div>
+                              <div data-kg="editor">
+                                <div
+                                  role="textbox"
+                                  spellcheck="true"
+                                  data-lexical-editor="true"
+                                  contenteditable="true">
+                                  <p dir="ltr">
+                                    <span data-lexical-text="true">This is a caption</span>
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </figcaption>
+                      </figure>
                 </div>
             </div>
-        `, {ignoreCardContents: true});
+        `, {ignoreCardToolbarContents: true, ignoreInnerSVG: true});
     });
 
-    test('renders video card node', async function ({page}) {
+    test('renders video card node', async function () {
         const fileChooserPromise = page.waitForEvent('filechooser');
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/video.mp4');
 
@@ -66,7 +128,7 @@ test.describe('Video card', async () => {
         await fileChooser.setFiles([filePath]);
     });
 
-    test('can upload video file from slash menu', async function ({page}) {
+    test('can upload video file from slash menu', async function () {
         const fileChooserPromise = page.waitForEvent('filechooser');
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/video.mp4');
 
@@ -81,7 +143,7 @@ test.describe('Video card', async () => {
         await expect(await page.getByTestId('media-duration')).toContainText('0:04');
     });
 
-    test('can upload video file from card menu', async function ({page}) {
+    test('can upload video file from card menu', async function () {
         await focusEditor(page);
         await uploadVideo(page);
 
@@ -89,7 +151,7 @@ test.describe('Video card', async () => {
         await expect(await page.getByTestId('media-duration')).toContainText('0:04');
     });
 
-    test('can show errors for failed video upload', async function ({page}) {
+    test('can show errors for failed video upload', async function () {
         await focusEditor(page);
         await uploadVideo(page, 'video-fail.mp4');
 
@@ -97,7 +159,7 @@ test.describe('Video card', async () => {
         await expect(await page.getByTestId('media-placeholder-errors')).toBeVisible();
     });
 
-    test('can manage custom thumbnail', async function ({page}) {
+    test('can manage custom thumbnail', async function () {
         await focusEditor(page);
         await uploadVideo(page);
 
@@ -119,12 +181,12 @@ test.describe('Video card', async () => {
         await expect(await page.getByTestId('media-upload-filled')).toBeVisible();
 
         // Can remove thumbnail
-        const replaceButton = page.getByTestId('custom-thumbnail-replace');
+        const replaceButton = page.getByTestId('media-upload-remove');
         await replaceButton.click();
         await expect(await page.getByTestId('media-upload-placeholder')).toBeVisible();
     });
 
-    test('can show errors for custom thumbnail', async function ({page}) {
+    test('can show errors for custom thumbnail', async function () {
         await focusEditor(page);
         await uploadVideo(page);
 
@@ -145,10 +207,10 @@ test.describe('Video card', async () => {
         await fileChooser.setFiles([imagePath]);
 
         // Errors should be visible
-        await expect(await page.getByTestId('custom-thumbnails-errors')).toBeVisible();
+        await expect(await page.getByTestId('media-upload-errors')).toBeVisible();
     });
 
-    test('can hide custom thumbnail if loop enabled', async function ({page}) {
+    test('can hide custom thumbnail if loop enabled', async function () {
         await focusEditor(page);
         await uploadVideo(page);
 
@@ -166,7 +228,7 @@ test.describe('Video card', async () => {
         await expect(page.getByTestId('media-upload-placeholder')).toBeHidden();
     });
 
-    test('can upload dropped video', async function ({page}) {
+    test('can upload dropped video', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/video.mp4');
         const fileChooserPromise = page.waitForEvent('filechooser');
 
@@ -191,7 +253,7 @@ test.describe('Video card', async () => {
         await expect(await page.getByTestId('media-duration')).toContainText('0:04');
     });
 
-    test('can show errors if was dropped a file with wrong extension to video placeholder', async function ({page}) {
+    test('can show errors if was dropped a file with wrong extension to video placeholder', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
         const fileChooserPromise = page.waitForEvent('filechooser');
 
@@ -211,7 +273,7 @@ test.describe('Video card', async () => {
         await expect(await page.getByTestId('media-placeholder-errors')).toBeVisible();
     });
 
-    test('can upload dropped custom thumbnail', async function ({page}) {
+    test('can upload dropped custom thumbnail', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
 
         await focusEditor(page);
@@ -234,7 +296,7 @@ test.describe('Video card', async () => {
         await expect(await page.getByTestId('media-upload-filled')).toBeVisible();
     });
 
-    test('can show errors if was dropped a file with wrong extension to custom thumbnail', async function ({page}) {
+    test('can show errors if was dropped a file with wrong extension to custom thumbnail', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/video.mp4');
 
         await focusEditor(page);
@@ -248,10 +310,10 @@ test.describe('Video card', async () => {
         await page.getByTestId('media-upload-placeholder').dispatchEvent('drop', {dataTransfer});
 
         // Errors should be visible
-        await expect(await page.getByTestId('custom-thumbnails-errors')).toBeVisible();
+        await expect(await page.getByTestId('media-upload-errors')).toBeVisible();
     });
 
-    test('renders video card toolbar', async function ({page}) {
+    test('renders video card toolbar', async function () {
         await focusEditor(page);
 
         // Upload video
@@ -265,7 +327,7 @@ test.describe('Video card', async () => {
         await expect(await page.locator('[data-kg-card-toolbar="video"]')).toBeVisible();
     });
 
-    test('video card toolbar has Edit button', async function ({page}) {
+    test('video card toolbar has Edit button', async function () {
         await focusEditor(page);
 
         // Upload video
@@ -291,7 +353,7 @@ test.describe('Video card', async () => {
         `, {ignoreCardContents: true});
     });
 
-    test('adds extra paragraph when video is inserted at end of document', async function ({page}) {
+    test('adds extra paragraph when video is inserted at end of document', async function () {
         await focusEditor(page);
         await page.click('[data-kg-plus-button]');
 
@@ -309,7 +371,7 @@ test.describe('Video card', async () => {
         `, {ignoreCardContents: true});
     });
 
-    test('does not add extra paragraph when video is inserted mid-document', async function ({page}) {
+    test('does not add extra paragraph when video is inserted mid-document', async function () {
         await focusEditor(page);
         await page.keyboard.press('Enter');
         await page.keyboard.type('Testing');
@@ -330,7 +392,7 @@ test.describe('Video card', async () => {
         `, {ignoreCardContents: true});
     });
 
-    test('can add snippet', async function ({page}) {
+    test('can add snippet', async function () {
         await focusEditor(page);
 
         // Upload video
@@ -347,6 +409,74 @@ test.describe('Video card', async () => {
         await page.waitForSelector('[data-kg-cardmenu-selected="true"]');
         await page.keyboard.press('Enter');
         await expect(await page.locator('[data-kg-card="video"]')).toHaveCount(2);
+    });
+
+    test('can undo/redo without losing nested editor content', async () => {
+        await focusEditor(page);
+        // Upload video
+        await uploadVideo(page);
+        await page.waitForSelector('[data-testid="media-upload-placeholder"]');
+
+        await page.click('[data-testid="video-card-caption"]');
+        await page.keyboard.type('Test caption');
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.press(`${ctrlOrCmd()}+z`);
+
+        await assertHTML(page, html`
+            <div data-lexical-decorator="true" contenteditable="false">
+                <div data-kg-card-editing="false" data-kg-card-selected="true" data-kg-card="video">
+                    <figure>
+                        <div>
+                          <div>
+                            <img
+                              alt="Video thumbnail"
+                              src="blob:..." />
+                          </div>
+                          <div>
+                            <button type="button"><svg></svg></button>
+                          </div>
+                          <div>
+                            <div>
+                              <svg></svg>
+                              <div>
+                                <span>0:00</span>
+                                /
+                                <span>0:04</span>
+                              </div>
+                              <div><button type="button"></button></div>
+                              <button type="button">1×</button>
+                              <button type="button"><svg></svg></button>
+                              <div>
+                                <div></div>
+                                <button type="button"></button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <figcaption>
+                          <div>
+                            <div>
+                              <div data-kg="editor">
+                                <div
+                                  role="textbox"
+                                  spellcheck="true"
+                                  data-lexical-editor="true"
+                                  contenteditable="true">
+                                  <p dir="ltr">
+                                    <span data-lexical-text="true">Test caption</span>
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </figcaption>
+                      </figure>
+                    <div data-kg-card-toolbar="video"></div>
+                </div>
+            </div>
+            <p><br /></p>
+        `, {ignoreCardToolbarContents: true, ignoreInnerSVG: true});
     });
 });
 

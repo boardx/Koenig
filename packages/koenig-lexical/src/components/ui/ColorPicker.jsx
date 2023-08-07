@@ -1,15 +1,31 @@
-import React, {useCallback, useEffect, useRef} from 'react';
+import React, {Fragment, useCallback, useEffect, useRef} from 'react';
+import clsx from 'clsx';
+import {Button} from './Button';
 import {ReactComponent as EyedropperIcon} from '../../assets/icons/kg-eyedropper.svg';
 import {HexColorInput, HexColorPicker} from 'react-colorful';
 import {INPUT_CLASSES} from './Input';
 import {getAccentColor} from '../../utils/getAccentColor';
 
-export function ColorPicker({value, swatches, eyedropper, onChange, onBlur}) {
-    // Prevent clashing with dragging the settings panel around
-    const stopPropagation = useCallback(e => e.stopPropagation(), []);
-
+export function ColorPicker({value, eyedropper, hasTransparentOption, onChange}) {
     // HexColorInput doesn't support adding a ref on the input itself
     const inputWrapperRef = useRef(null);
+
+    const stopPropagation = useCallback((e) => {
+        e.stopPropagation();
+
+        const inputElement = inputWrapperRef.current?.querySelector('input');
+        const isInputField = e.target === inputElement;
+
+        // Allow text selection for events on the input field
+        if (isInputField) {
+            return;
+        }
+
+        // Prevent closing the color picker when clicking somewhere inside it
+        inputWrapperRef.current?.querySelector('input')?.focus();
+
+        e.preventDefault();
+    }, []);
 
     const isUsingColorPicker = useRef(false);
 
@@ -28,30 +44,18 @@ export function ColorPicker({value, swatches, eyedropper, onChange, onBlur}) {
         document.addEventListener('touchend', stopUsingColorPicker);
     }, [stopUsingColorPicker]);
 
-    const onBlurHandler = useCallback((e) => {
-        setTimeout(() => {
-            if (!isUsingColorPicker.current && !inputWrapperRef.current?.contains(document.activeElement)) {
-                onBlur();
-            }
-        }, 100);
-    }, [onBlur]);
-
-    const pickSwatch = useCallback((color) => {
-        onChange(color);
-
-        inputWrapperRef.current?.querySelector('input')?.focus();
-    }, [onChange]);
-
     const openColorPicker = useCallback((e) => {
         e.preventDefault();
 
         isUsingColorPicker.current = true;
+        document.body.style.setProperty('pointer-events', 'none');
 
         const eyeDropper = new window.EyeDropper();
         eyeDropper.open()
             .then(result => onChange(result.sRGBHex))
             .finally(() => {
                 isUsingColorPicker.current = false;
+                document.body.style.removeProperty('pointer-events');
                 inputWrapperRef.current?.querySelector('input')?.focus();
             });
     }, [onChange]);
@@ -67,41 +71,42 @@ export function ColorPicker({value, swatches, eyedropper, onChange, onBlur}) {
         hexValue = '';
     }
 
+    const focusHexInputOnClick = useCallback((e) => {
+        inputWrapperRef.current?.querySelector('input')?.focus();
+    }, []);
+
     return (
         <div className="mt-2" onMouseDown={stopPropagation} onTouchStart={stopPropagation}>
             <HexColorPicker color={hexValue || '#ffffff'} onChange={onChange} onMouseDown={startUsingColorPicker} onTouchStart={startUsingColorPicker} />
-            <div className="mt-3 flex">
-                <div ref={inputWrapperRef} className={`flex w-full items-center ${INPUT_CLASSES} rounded-r-none`}>
+            <div className="mt-3 flex gap-2">
+                <div ref={inputWrapperRef} className={`relative flex w-full items-center ${INPUT_CLASSES}`} onClick={focusHexInputOnClick}>
                     <span className='ml-1 mr-2 text-grey-700'>#</span>
-                    <HexColorInput aria-label="Color value" className='w-full bg-transparent' color={hexValue} onBlur={onBlurHandler} onChange={onChange} />
-                </div>
-                <div className={`flex items-center gap-1 ${INPUT_CLASSES} ml-[-1px] rounded-l-none`}>
-                    {swatches.map(swatch => (
-                        <ColorSwatch key={swatch.title} onSelect={pickSwatch} {...swatch} />
-                    ))}
-
+                    <HexColorInput aria-label="Color value" className='z-50 w-full bg-transparent' color={hexValue} onChange={onChange} />
                     {eyedropper && !!window.EyeDropper && (
                         <button
-                            className="ml-[2px] flex h-4 w-4 items-center justify-center p-[1px] pt-[2px]"
+                            className="absolute inset-y-0 right-3 z-50 my-auto h-4 w-4 p-[1px]"
                             type="button"
-                            onMouseDown={openColorPicker}
-                            onTouchStart={openColorPicker}
+                            onClick={openColorPicker}
                         >
                             <EyedropperIcon className="h-full w-full" />
                         </button>
                     )}
                 </div>
+
+                {hasTransparentOption && <Button color='grey' value='Clear' onClick={() => onChange('transparent')} />}
             </div>
         </div>
     );
 }
 
-function ColorSwatch({hex, accent, transparent, title, onSelect}) {
+function ColorSwatch({hex, accent, transparent, title, isSelected, onSelect}) {
     const backgroundColor = accent ? getAccentColor() : hex;
 
     const ref = useRef(null);
 
-    const onClickHandler = useCallback(() => {
+    const onSelectHandler = (e) => {
+        e.preventDefault();
+
         if (accent) {
             onSelect('accent');
         } else if (transparent) {
@@ -109,31 +114,55 @@ function ColorSwatch({hex, accent, transparent, title, onSelect}) {
         } else {
             onSelect(hex);
         }
-    }, [accent, hex, onSelect, transparent]);
+    };
 
     return (
-        <button ref={ref} className={`relative flex h-4 w-4 shrink-0 items-center rounded border border-grey-300`} style={{backgroundColor}} title={title} type="button" onClick={onClickHandler}>
+        <button
+            ref={ref}
+            className={clsx(
+                `relative flex h-5 w-5 shrink-0 items-center rounded-full border border-grey-200 dark:border-grey-800`,
+                isSelected && 'outline outline-2 outline-green'
+            )}
+            style={{backgroundColor}}
+            title={title}
+            type="button"
+            onClick={onSelectHandler}
+        >
             {transparent && <div className="absolute left-0 top-0 z-10 w-[136%] origin-left rotate-45 border-b border-b-red" />}
         </button>
     );
 }
 
-export function ColorIndicator({value, onClick}) {
+export function ColorIndicator({value, swatches, onSwatchChange, onTogglePicker, isExpanded}) {
     let backgroundColor = value;
+    let selectedSwatch = swatches.find(swatch => swatch.hex === value)?.title;
     if (value === 'accent') {
         backgroundColor = getAccentColor();
+        selectedSwatch = swatches.find(swatch => swatch.accent)?.title;
     } else if (value === 'transparent') {
         backgroundColor = 'white';
+        selectedSwatch = swatches.find(swatch => swatch.transparent)?.title;
+    }
+
+    if (isExpanded) {
+        selectedSwatch = null;
     }
 
     return (
-        <button aria-label="Pick color" className="relative h-6 w-6" type="button" onClick={onClick}>
-            <div className='absolute inset-0 rounded-full bg-[conic-gradient(hsl(360,100%,50%),hsl(315,100%,50%),hsl(270,100%,50%),hsl(225,100%,50%),hsl(180,100%,50%),hsl(135,100%,50%),hsl(90,100%,50%),hsl(45,100%,50%),hsl(0,100%,50%))]' />
-            {value && (
-                <div className="absolute inset-[3px] overflow-hidden rounded-full border border-grey-200" style={{backgroundColor}} onClick={onClick}>
-                    {value === 'transparent' && <div className="absolute top-[3px] left-[3px] z-10 w-[136%] origin-left rotate-45 border-b border-b-red" />}
-                </div>
-            )}
-        </button>
+        <div className='flex gap-1'>
+            <div className={`flex items-center gap-1`}>
+                {swatches.map(({customContent, ...swatch}) => (
+                    customContent ? <Fragment key={swatch.title}>{customContent}</Fragment> : <ColorSwatch key={swatch.title} isSelected={selectedSwatch === swatch.title} onSelect={onSwatchChange} {...swatch} />
+                ))}
+            </div>
+            <button aria-label="Pick color" className="relative h-6 w-6 rounded-full border border-grey-200 dark:border-grey-800" type="button" onClick={onTogglePicker}>
+                <div className='absolute inset-0 rounded-full bg-[conic-gradient(hsl(360,100%,50%),hsl(315,100%,50%),hsl(270,100%,50%),hsl(225,100%,50%),hsl(180,100%,50%),hsl(135,100%,50%),hsl(90,100%,50%),hsl(45,100%,50%),hsl(0,100%,50%))]' />
+                {value && !selectedSwatch && (
+                    <div className="absolute inset-[3px] overflow-hidden rounded-full border border-white dark:border-grey-950" style={{backgroundColor}}>
+                        {value === 'transparent' && <div className="absolute top-[3px] left-[3px] z-10 w-[136%] origin-left rotate-45 border-b border-b-red" />}
+                    </div>
+                )}
+            </button>
+        </div>
     );
 }

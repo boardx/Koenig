@@ -1,5 +1,6 @@
 import CodeMirror from '@uiw/react-codemirror';
 import React from 'react';
+import {CodeMirrorPlugin} from '../../../../plugins/CodeMirrorPlugin';
 import {EditorView, keymap, lineNumbers} from '@codemirror/view';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {closeBrackets, closeBracketsKeymap} from '@codemirror/autocomplete';
@@ -8,7 +9,7 @@ import {minimalSetup} from '@uiw/codemirror-extensions-basic-setup';
 import {standardKeymap} from '@codemirror/commands';
 import {tags as t} from '@lezer/highlight';
 
-export default function HtmlEditor({darkMode, html, updateHtml}) {
+export default function HtmlEditor({darkMode, html, updateHtml, onBlur}) {
     const onChange = React.useCallback((value) => {
         updateHtml(value);
     }, [updateHtml]);
@@ -99,7 +100,7 @@ export default function HtmlEditor({darkMode, html, updateHtml}) {
         '&.cm-editor .cm-cursor, &.cm-editor .cm-dropCursor': {
             borderLeft: '1.2px solid white'
         }
-        
+
     });
 
     const editorLightHighlightStyle = HighlightStyle.define([
@@ -133,9 +134,10 @@ export default function HtmlEditor({darkMode, html, updateHtml}) {
 
     const editorCSS = darkMode ? editorDarkCSS : editorLightCSS;
     const editorHighlightStyle = darkMode ? editorDarkHighlightStyle : editorLightHighlightStyle;
-    
+
     // Base extensions for the CodeMirror editor
     const extensions = [
+        EditorView.lineWrapping, // wraps lines that exceed the viewport width
         syntaxHighlighting(editorHighlightStyle), // customizes syntax highlighting rules
         editorCSS,
         lineNumbers(), // adds line numbers to the gutter
@@ -148,12 +150,13 @@ export default function HtmlEditor({darkMode, html, updateHtml}) {
 
     return (
         <div className="not-kg-prose min-h-[170px]">
+            <CodeMirrorPlugin />
             <CodeMirror
                 autoFocus={true} // autofocus the editor whenever it is rendered
                 basicSetup={false} // basic setup includes unnecessary extensions
                 extensions={extensions}
-                // theme={darkMode ? githubDark : githubLight}
                 value={html}
+                onBlur={onBlur}
                 onChange={onChange}
             />
         </div>

@@ -12,12 +12,10 @@ export const E2E_PORT = 5174;
 export default defineConfig({
     outputDir: path.resolve(__dirname, '..', '..', 'playwright-report'),
     testDir: './test/e2e',
-    fullyParallel: true,
     /* Fail the build on CI if you accidentally left test.only in the source code. */
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 2 : undefined,
-    maxFailures: process.env.CI ? 10 : 0,
     /* Reporter to use. See https://playwright.dev/docs/test-reporters */
     reporter: [['html'], [process.env.CI ? 'github' : 'list']],
     /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */

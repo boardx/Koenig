@@ -2,8 +2,18 @@ import {assertHTML, focusEditor, html, initialize} from '../../utils/e2e';
 import {test} from '@playwright/test';
 
 test.describe('Text transforms > Headings', async () => {
-    test.beforeEach(async ({page}) => {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
+    });
+
+    test.afterAll(async () => {
+        await page.close();
     });
 
     test.describe('on blank paragraph', function () {
@@ -34,7 +44,7 @@ test.describe('Text transforms > Headings', async () => {
         }];
 
         BASIC_TRANSFORMS.forEach((testCase) => {
-            test(`${testCase.text} -> heading`, async function ({page}) {
+            test(`${testCase.text} -> heading`, async function () {
                 await focusEditor(page);
                 await page.keyboard.type(testCase.text);
                 await assertHTML(page, testCase.html);
@@ -43,7 +53,7 @@ test.describe('Text transforms > Headings', async () => {
     });
 
     test.describe('on paragraph with text', function () {
-        test('"# " before plain text converts to heading', async function ({page}) {
+        test('"# " before plain text converts to heading', async function () {
             await focusEditor(page);
             await page.keyboard.type('existing text');
             await assertHTML(page, html`<p dir="ltr"><span data-lexical-text="true">existing text</span></p>`);
@@ -58,7 +68,7 @@ test.describe('Text transforms > Headings', async () => {
             await assertHTML(page, html`<h1 dir="ltr"><span data-lexical-text="true">existing text</span></h1>`);
         });
 
-        test('"# " before formatted text converts to heading', async function ({page}) {
+        test('"# " before formatted text converts to heading', async function () {
             await focusEditor(page);
             await page.keyboard.type('existing **formatted** text');
             await assertHTML(page, html`
@@ -87,7 +97,7 @@ test.describe('Text transforms > Headings', async () => {
     });
 
     test.describe('on existing heading', function () {
-        test('"# " before existing h1 text removes "# "', async function ({page}) {
+        test('"# " before existing h1 text removes "# "', async function () {
             await focusEditor(page);
             await page.keyboard.type('# existing h1');
             await assertHTML(page, html`
@@ -110,7 +120,7 @@ test.describe('Text transforms > Headings', async () => {
             `);
         });
 
-        test('"# " before existing h2 text converts to h1', async function ({page}) {
+        test('"# " before existing h2 text converts to h1', async function () {
             await focusEditor(page);
             await page.keyboard.type('## existing h2');
             await assertHTML(page, html`
@@ -133,7 +143,7 @@ test.describe('Text transforms > Headings', async () => {
             `);
         });
 
-        test('"##" before existing h1 text converts to h2', async function ({page}) {
+        test('"##" before existing h1 text converts to h2', async function () {
             await focusEditor(page);
             await page.keyboard.type('# existing h1');
             await assertHTML(page, html`
@@ -159,7 +169,7 @@ test.describe('Text transforms > Headings', async () => {
 
     test.describe('on lists', function () {
         // TODO: core lexical behaviour differs from our mobiledoc editor here
-        test.skip('"# " before list item converts list to h1', async function ({page}) {
+        test.skip('"# " before list item converts list to h1', async function () {
             await focusEditor(page);
             await page.keyboard.type('- list item');
             await assertHTML(page, html`
@@ -184,7 +194,7 @@ test.describe('Text transforms > Headings', async () => {
     });
 
     test.describe('on quotes', function () {
-        test('"# " at beginning of blockquote converts to h1', async function ({page}) {
+        test('"# " at beginning of blockquote converts to h1', async function () {
             await focusEditor(page);
             await page.keyboard.type('> ');
             await assertHTML(page, html`

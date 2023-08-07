@@ -1,41 +1,32 @@
-import ImageUploadForm from './ImageUploadForm';
 import KoenigComposerContext from '../../context/KoenigComposerContext.jsx';
-import React, {createContext, useContext, useEffect, useState} from 'react';
+import React from 'react';
+import clsx from 'clsx';
 import useSettingsPanelReposition from '../../hooks/useSettingsPanelReposition';
 import {ButtonGroup} from './ButtonGroup';
 import {ColorIndicator, ColorPicker} from './ColorPicker';
 import {ColorOptionButtons} from './ColorOptionButtons';
-import {ReactComponent as DeleteIcon} from '../../assets/icons/kg-trash.svg';
 import {Dropdown} from './Dropdown';
-import {IconButton} from './IconButton';
 import {Input} from './Input';
 import {InputList} from './InputList';
-import {MediaPlaceholder} from './MediaPlaceholder';
+import {MediaUploader} from './MediaUploader';
 import {MultiSelectDropdown} from './MultiSelectDropdown';
-import {ProgressBar} from './ProgressBar';
+import {Slider} from './Slider.jsx';
 import {Toggle} from './Toggle';
-import {openFileSelection} from '../../utils/openFileSelection';
-
-const SettingsPanelContext = createContext();
-
-export const useSettingsPanelContext = () => useContext(SettingsPanelContext);
 
 export function SettingsPanel({children, darkMode}) {
-    const {ref,repositionPanel} = useSettingsPanelReposition();
+    const {ref} = useSettingsPanelReposition();
 
     return (
         // Ideally we would use Portal to avoid issues with transformed ancestors (https://bugs.chromium.org/p/chromium/issues/detail?id=20574)
         // However, Portal causes problems with drag/drop, focus, etc
-        <SettingsPanelContext.Provider value={{repositionPanel}}>
-            <div className={`!mt-0 ${darkMode ? 'dark' : ''}`}>
-                <div ref={ref}
-                    className="not-kg-prose z-[9999999] m-0 flex w-[320px] flex-col gap-2 rounded-lg bg-white bg-clip-padding p-6 font-sans shadow dark:bg-grey-950"
-                    data-testid="settings-panel"
-                >
-                    {children}
-                </div>
+        <div className={`!mt-0 touch-none ${darkMode ? 'dark' : ''}`}>
+            <div ref={ref}
+                className="not-kg-prose fixed left-0 top-0 z-[9999999] m-0 flex w-[320px] flex-col gap-2 rounded-lg bg-white bg-clip-padding p-6 font-sans shadow-md will-change-transform dark:bg-grey-950 dark:shadow-xl"
+                data-testid="settings-panel"
+            >
+                {children}
             </div>
-        </SettingsPanelContext.Provider>
+        </div>
     );
 }
 
@@ -55,11 +46,26 @@ export function ToggleSetting({label, description, isChecked, onChange, dataTest
     );
 }
 
-export function InputSetting({label, hideLabel, description, onChange, value, placeholder, dataTestId}) {
+export function SliderSetting({label, onChange, max, min, value, defaultValue, dataTestId}) {
+    return (
+        <div className="my-2 flex w-full flex-col gap-1">
+            <div className="flex items-center justify-between font-sans text-[1.3rem] font-normal">
+                <div className="font-bold text-grey-900 dark:text-grey-200">{label}</div>
+                <div className="text-grey-500 dark:text-grey-600">
+                    <span className="text-grey-900 dark:text-grey-100">{value}</span>
+                    <span className="px-[2px]">/</span>{max}
+                </div>
+            </div>
+            <Slider dataTestId={dataTestId} defaultValue={defaultValue} max={max} min={min} value={value} onChange={onChange} />
+        </div>
+    );
+}
+
+export function InputSetting({label, hideLabel, description, onChange, value, placeholder, dataTestId, onBlur}) {
     return (
         <div className="mt-2 flex w-full flex-col justify-between gap-2 text-[1.3rem] first:mt-0">
             <div className={hideLabel ? 'sr-only' : 'font-bold text-grey-900 dark:text-grey-200'}>{label}</div>
-            <Input dataTestId={dataTestId} placeholder={placeholder} value={value} onChange={onChange} />
+            <Input dataTestId={dataTestId} placeholder={placeholder} value={value} onBlur={onBlur} onChange={onChange} />
             {description &&
                 <p className="text-[1.25rem] font-normal leading-snug text-grey-700">{description}</p>
             }
@@ -135,14 +141,24 @@ export function DropdownSetting({label, description, value, menu, onChange}) {
     );
 }
 
-export function MultiSelectDropdownSetting({label, description, value, menu, onChange, dataTestId}) {
+/**
+ *
+ * @param {object} options
+ * @param {T[]} options.items The curretly selected items
+ * @param {T[]} options.availableItems The items available for selection
+ * @param {boolean} options.allowAdd Whether to allow adding new items
+ * @returns
+ */
+export function MultiSelectDropdownSetting({label, description, placeholder = '', items, availableItems, onChange, dataTestId, allowAdd = true}) {
     return (
         <div className="mt-2 flex w-full flex-col justify-between gap-2 text-[1.3rem] first:mt-0">
             <div className="font-bold text-grey-900 dark:text-grey-200">{label}</div>
             <MultiSelectDropdown
+                allowAdd={allowAdd}
+                availableItems={availableItems}
                 dataTestId={dataTestId}
-                menu={menu}
-                value={value}
+                items={items}
+                placeholder={placeholder}
                 onChange={onChange}
             />
             {description &&
@@ -176,96 +192,73 @@ export function ColorOptionSetting({label, onClick, selectedName, buttons, layou
     );
 }
 
-export function ColorPickerSetting({label, onChange, value, swatches, eyedropper, dataTestId}) {
-    const [isExpanded, setExpanded] = useState(false);
-    const {repositionPanel} = useSettingsPanelContext();
+export function ColorPickerSetting({label, isExpanded, onSwatchChange, onPickerChange, onTogglePicker, value, swatches, eyedropper, hasTransparentOption, dataTestId}) {
+    const mappedPicker = (event) => {
+        onTogglePicker(true);
+    };
 
-    useEffect(() => repositionPanel(), [repositionPanel, isExpanded]);
+    const markClickedInside = (event) => {
+        event.stopPropagation();
+    };
+
+    // Close on click outside
+    React.useEffect(() => {
+        if (isExpanded) {
+            const closePicker = (event) => {
+                onTogglePicker(false);
+            };
+            document.addEventListener('click', closePicker);
+
+            return () => {
+                document.removeEventListener('click', closePicker);
+            };
+        }
+    }, [isExpanded]);
 
     return (
-        <div className="mt-2 flex-col" data-testid={dataTestId}>
+        <div className="mt-2 flex-col" data-testid={dataTestId} onClick={markClickedInside}>
             <div className="flex w-full items-center justify-between text-[1.3rem] first:mt-0">
                 <div className="font-bold text-grey-900 dark:text-grey-200">{label}</div>
 
                 <div className="shrink-0 pl-2">
-                    <ColorIndicator value={value} onClick={() => setExpanded(!isExpanded)} />
+                    <ColorIndicator
+                        isExpanded={isExpanded}
+                        swatches={swatches}
+                        value={value}
+                        onSwatchChange={onSwatchChange}
+                        onTogglePicker={mappedPicker}
+                    />
                 </div>
             </div>
-            {isExpanded && <ColorPicker eyedropper={eyedropper} swatches={swatches} value={value} onBlur={() => setExpanded(false)} onChange={onChange} />}
+            {isExpanded && <ColorPicker eyedropper={eyedropper} hasTransparentOption={hasTransparentOption} value={value} onChange={onPickerChange} />}
         </div>
     );
 }
 
-export function MediaUploadSetting({label, hideLabel, onFileChange, isDraggedOver, placeholderRef, src, alt, isLoading, dataTestId, errors = [], progress, onRemoveMedia, icon, desc = '', size, borderStyle, mimeTypes}) {
-    const fileInputRef = React.useRef(null);
-
-    const onFileInputRef = (element) => {
-        fileInputRef.current = element;
-    };
-
-    const progressStyle = {
-        width: `${progress?.toFixed(0)}%`
-    };
-
-    const onRemove = (e) => {
-        e.stopPropagation(); // prevents card from losing selected state
-        onRemoveMedia();
-    };
-
-    const isEmpty = !isLoading && !src;
-
+export function MediaUploadSetting({className, label, hideLabel, onFileChange, isDraggedOver, placeholderRef, src, alt, isLoading, errors = [], progress, onRemoveMedia, icon, desc = '', size, borderStyle, mimeTypes, isPinturaEnabled, openImageEditor, setFileInputRef}) {
     return (
-        <div className="mt-2 text-[1.3rem] first:mt-0" data-testid="custom-thumbnail">
+        <div className={clsx('mt-2 text-[1.3rem] first:mt-0', className)} data-testid="media-upload-setting">
             <div className={hideLabel ? 'sr-only' : 'font-bold text-grey-900 dark:text-grey-200'}>{label}</div>
 
-            {isEmpty &&
-                <div className="h-32">
-                    <MediaPlaceholder
-                        borderStyle={borderStyle}
-                        dataTestId="media-upload-placeholder"
-                        desc={desc}
-                        errorDataTestId="custom-thumbnails-errors"
-                        errors={errors}
-                        filePicker={() => openFileSelection({fileInputRef})}
-                        icon={icon}
-                        isDraggedOver={isDraggedOver}
-                        placeholderRef={placeholderRef}
-                        size={size}
-                    />
-                    <ImageUploadForm
-                        fileInputRef={onFileInputRef}
-                        filePicker={() => openFileSelection({fileInputRef})}
-                        mimeTypes={mimeTypes}
-                        onFileChange={onFileChange}
-                    />
-                </div>
-            }
-
-            {!isEmpty && (
-                <div className="group relative flex h-32 items-center justify-center rounded" data-testid="media-upload-filled">
-                    {src && (
-                        <>
-                            <img alt={alt} className="mx-auto h-full w-full rounded object-cover" src={src} />
-                            <div className="absolute inset-0 rounded bg-gradient-to-t from-black/0 via-black/5 to-black/30 opacity-0 transition-all group-hover:opacity-100"></div>
-                        </>
-                    )}
-
-                    {!isLoading && (
-                        <div className="absolute top-2 right-2 flex opacity-0 transition-all group-hover:opacity-100">
-                            <IconButton dataTestId={dataTestId} Icon={DeleteIcon} onClick={onRemove} />
-                        </div>
-                    )}
-
-                    {isLoading && (
-                        <div
-                            className="absolute inset-0 flex min-w-full items-center justify-center overflow-hidden rounded border border-dashed border-grey/20 bg-grey-50"
-                            data-testid="custom-thumbnail-progress"
-                        >
-                            <ProgressBar style={progressStyle} />
-                        </div>
-                    )}
-                </div>
-            )}
+            <MediaUploader
+                alt={alt}
+                borderStyle={borderStyle}
+                className="h-32"
+                desc={desc}
+                dragHandler={{isDraggedOver, setRef: placeholderRef}}
+                errors={errors}
+                icon={icon}
+                isLoading={isLoading}
+                isPinturaEnabled={isPinturaEnabled}
+                mimeTypes={mimeTypes}
+                openImageEditor={openImageEditor}
+                progress={progress}
+                setFileInputRef={setFileInputRef}
+                size={size}
+                src={src}
+                onFileChange={onFileChange}
+                onRemoveMedia={onRemoveMedia}
+            />
         </div>
     );
 }

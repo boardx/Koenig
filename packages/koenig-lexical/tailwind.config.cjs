@@ -27,7 +27,7 @@ module.exports = {
                 700: '#7C8B9A',
                 800: '#626D79',
                 900: '#394047',
-                950: '#1F2429'
+                950: '#23292F'
             },
             green: {
                 DEFAULT: '#30CF43',
@@ -77,7 +77,7 @@ module.exports = {
         },
         fontFamily: {
             sans: 'Inter, -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif',
-            serif: 'Georgia, serif',
+            serif: 'Georgia, Times, serif',
             mono: 'Consolas, Liberation Mono, Menlo, Courier, monospace'
         },
         boxShadow: {
@@ -176,7 +176,7 @@ module.exports = {
                 '9xl': ['12.8rem', '1']
             },
             screens: {
-                xs: '480px'
+                xs: '500px'
             }
         }
     },

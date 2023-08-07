@@ -22,21 +22,28 @@ function guidFor() {
  * @example
  * const {ref} = useMovable();
  */
-export default function useMovable({adjustOnResize} = {}) {
+export default function useMovable({adjustOnResize, adjustOnDrag} = {}) {
     const ref = useRef(null);
 
     const moveThreshold = 3;
 
     // Use refs to avoid re-renders, see https://reactjs.org/docs/hooks-faq.html#is-there-something-like-instance-variables
-    let active = useRef(false);
-    let currentX = useRef();
-    let currentY = useRef();
-    let initialX = useRef();
-    let initialY = useRef();
-    let xOffset = useRef();
-    let yOffset = useRef();
-    let originalOverflow = useRef();
-    let guid = guidFor();
+    const active = useRef(false);
+    const currentX = useRef();
+    const currentY = useRef();
+
+    /**
+     * Cursor offset from the left top side of the panel on touchstart/mousedown
+     */
+    const offsetX = useRef();
+    const offsetY = useRef();
+
+    // Keep track of spacing, so we can allow negative spacing when resizing if the user placed the window outside the canvas
+    // Contains an object with top, left, right and bottom spacing between the panel and the viewport
+    const lastSpacing = useRef();
+
+    const originalOverflow = useRef();
+    const guid = guidFor();
 
     // React event handlers get added to the root element, so if we add listeners to the ref directly
     // and call stopPropagation they stop any React events on child nodes from firing.
@@ -59,8 +66,35 @@ export default function useMovable({adjustOnResize} = {}) {
     }, []);
 
     const setTranslate = useCallback((xPos, yPos) => {
-        ref.current.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        ref.current.style.transform = `translate(${xPos}px, ${yPos}px)`;
     }, [ref]);
+
+    const setPosition = useCallback(({x, y}) => {
+        currentX.current = x;
+        currentY.current = y;
+
+        const width = ref.current.offsetWidth;
+        const height = ref.current.offsetHeight;
+
+        // Update spacing
+        const spacing = {
+            top: y,
+            left: x,
+            right: window.innerWidth - x - width,
+            bottom: window.innerHeight - y - height
+        };
+        lastSpacing.current = spacing;
+
+        setTranslate(x, y);
+    }, [setTranslate]);
+
+    const getPosition = useCallback(() => {
+        return {
+            x: currentX.current,
+            y: currentY.current,
+            lastSpacing: lastSpacing.current
+        };
+    }, []);
 
     const disableScroll = useCallback(() => {
         originalOverflow.current = ref.current?.style.overflow;
@@ -101,9 +135,6 @@ export default function useMovable({adjustOnResize} = {}) {
     }, [ref, cancelClick]);
 
     const drag = useCallback((e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
         let eventX, eventY;
 
         if (e.type === 'touchmove') {
@@ -114,12 +145,11 @@ export default function useMovable({adjustOnResize} = {}) {
             eventY = e.clientY;
         }
 
-        if (!active) {
+        if (!active.current) {
             if (
-                Math.abs(Math.abs(initialX.current - eventX) - Math.abs(xOffset.current)) > moveThreshold ||
-                Math.abs(Math.abs(initialY.current - eventY) - Math.abs(yOffset.current)) > moveThreshold
+                Math.abs(eventX - offsetX.current - currentX.current) > moveThreshold ||
+                Math.abs(eventY - offsetY.current - currentY.current) > moveThreshold
             ) {
-                // dropdown.closeDropdowns();
                 disableScroll();
                 disableSelection();
                 disablePointerEvents();
@@ -127,29 +157,27 @@ export default function useMovable({adjustOnResize} = {}) {
             }
         }
 
-        if (active) {
-            currentX.current = eventX - initialX.current;
-            currentY.current = eventY - initialY.current;
-            xOffset.current = currentX.current;
-            yOffset.current = currentY.current;
+        if (active.current) {
+            let position = {
+                x: eventX - offsetX.current,
+                y: eventY - offsetY.current
+            };
 
-            setTranslate(currentX.current, currentY.current);
+            if (adjustOnDrag) {
+                position = adjustOnDrag(ref.current, {...position, lastSpacing: lastSpacing.current});
+            }
+
+            setPosition(position);
         }
-    }, [moveThreshold, setTranslate, disableScroll, disableSelection, disablePointerEvents]);
+    }, [moveThreshold, setPosition, disableScroll, disableSelection, disablePointerEvents, adjustOnDrag]);
 
     const dragEnd = useCallback((e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
         active.current = false;
 
-        initialX.current = currentX.current;
-        initialY.current = currentY.current;
-
-        window.removeEventListener('touchend', dragEnd, {capture: true, passive: false});
-        window.removeEventListener('touchmove', drag, {capture: true, passive: false});
-        window.removeEventListener('mouseup', dragEnd, {capture: true, passive: false});
-        window.removeEventListener('mousemove', drag, {capture: true, passive: false});
+        window.removeEventListener('touchend', dragEnd, {capture: true, passive: true});
+        window.removeEventListener('touchmove', drag, {capture: true, passive: true});
+        window.removeEventListener('mouseup', dragEnd, {capture: true, passive: true});
+        window.removeEventListener('mousemove', drag, {capture: true, passive: true});
 
         // Removing this immediately results in the click event behind re-enabled in the same
         // event loop meaning that it doesn't have the desired effect when dragging out of the canvas.
@@ -168,22 +196,23 @@ export default function useMovable({adjustOnResize} = {}) {
     }, [enableScroll, enableSelection, enablePointerEvents, drag, cancelClick]);
 
     const addActiveEventListeners = useCallback(() => {
-        window.addEventListener('touchend', dragEnd, {capture: true, passive: false});
-        window.addEventListener('touchmove', dragEnd, {capture: true, passive: false});
-        window.addEventListener('mouseup', dragEnd, {capture: true, passive: false});
-        window.addEventListener('mousemove', drag, {capture: true, passive: false});
+        window.addEventListener('touchend', dragEnd, {capture: true, passive: true});
+        window.addEventListener('touchmove', drag, {capture: true, passive: true});
+        window.addEventListener('mouseup', dragEnd, {capture: true, passive: true});
+        window.addEventListener('mousemove', drag, {capture: true, passive: true});
     }, [dragEnd, drag]);
 
     const dragStart = useCallback((e) => {
         e.stopPropagation();
+        active.current = false;
 
         if (e.type === 'touchstart' || e.button === 0) {
             if (e.type === 'touchstart') {
-                initialX.current = e.touches[0].clientX - (xOffset.current || 0);
-                initialY.current = e.touches[0].clientY - (yOffset.current || 0);
+                offsetX.current = e.touches[0].clientX - (currentX.current || 0);
+                offsetY.current = e.touches[0].clientY - (currentY.current || 0);
             } else {
-                initialX.current = e.clientX - (xOffset.current || 0);
-                initialY.current = e.clientY - (yOffset.current || 0);
+                offsetX.current = e.clientX - (currentX.current || 0);
+                offsetY.current = e.clientY - (currentY.current || 0);
             }
 
             for (const element of (e.path || e.composedPath())) {
@@ -210,10 +239,10 @@ export default function useMovable({adjustOnResize} = {}) {
     }, [dragStart]);
 
     const removeActiveEventListeners = useCallback(() => {
-        window.removeEventListener('touchend', dragEnd, {capture: true, passive: false});
-        window.removeEventListener('touchmove', drag, {capture: true, passive: false});
-        window.removeEventListener('mouseup', dragEnd, {capture: true, passive: false});
-        window.removeEventListener('mousemove', drag, {capture: true, passive: false});
+        window.removeEventListener('touchend', dragEnd, {capture: true, passive: true});
+        window.removeEventListener('touchmove', drag, {capture: true, passive: true});
+        window.removeEventListener('mouseup', dragEnd, {capture: true, passive: true});
+        window.removeEventListener('mousemove', drag, {capture: true, passive: true});
 
         // Removing this immediately results in the click event behind re-enabled in the same
         // event loop meaning that it doesn't have the desired effect when dragging out of the canvas.
@@ -236,21 +265,16 @@ export default function useMovable({adjustOnResize} = {}) {
                     return;
                 }
 
-                const {x, y} = adjustOnResize(elem, {x: currentX, y: currentY});
+                const position = adjustOnResize(elem, {x: currentX.current, y: currentY.current, lastSpacing: lastSpacing.current});
 
-                if (x === currentX.current && y === currentY.current) {
-                    return;
+                if (position.x !== currentX.current || position.y !== currentY.current) {
+                    // Adjust offsetX and offsetY to account for the difference in position moved
+                    // This is to make sure we don't jump drag position if the element is resized just after touch start
+                    // Say you start dragging on a button that opens a collapsible section, if the section is resized -> this fixes glitches
+                    offsetX.current = offsetX.current - (position.x - currentX.current);
+                    offsetY.current = offsetY.current - (position.y - currentY.current);
+                    setPosition(position);
                 }
-
-                currentX.current = x;
-                initialX.current = x;
-                xOffset.current = x;
-
-                currentY.current = y;
-                initialY.current = y;
-                yOffset.current = y;
-
-                setTranslate(x, y);
             });
             _resizeObserver.observe(elem);
         }
@@ -265,5 +289,5 @@ export default function useMovable({adjustOnResize} = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    return {ref};
+    return {ref, setPosition, getPosition};
 }

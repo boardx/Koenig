@@ -1717,13 +1717,518 @@ describe('mobiledocToLexical', function () {
             }));
         });
 
-        it('converts unordered lists');
-        it('converts unordered lists with links and formatting');
+        it('converts unordered lists', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: MOBILEDOC_VERSION,
+                ghostVersion: GHOST_VERSION,
+                atoms: [],
+                cards: [],
+                markups: [],
+                sections: [
+                    [3, 'ul', [
+                        [[0, [], 0, 'one']],
+                        [[0, [], 0, 'two']],
+                        [[0, [], 0, 'three']]
+                    ]]
+                ]
+            }));
 
-        it('converts ordered lists');
-        it('converts ordered lists with links and formatting');
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [
+                        {
+                            children: [
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'one',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 1,
+                                    version: 1
+                                },
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'two',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 2,
+                                    version: 1
+                                },
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'three',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 3,
+                                    version: 1
+                                }
+                            ],
+                            direction: 'ltr',
+                            format: '',
+                            indent: 0,
+                            tag: 'ul',
+                            type: 'list',
+                            listType: 'bullet',
+                            start: 1,
+                            version: 1
+                        }
+                    ],
+                    direction: 'ltr',
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
+
+        it('converts lists with links and formatting', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: MOBILEDOC_VERSION,
+                ghostVersion: GHOST_VERSION,
+                atoms: [],
+                cards: [],
+                markups: [
+                    ['a', ['href', 'https://koenig.ghost.org']],
+                    ['strong']
+                ],
+                sections: [
+                    [3, 'ul', [
+                        [[0, [], 0, 'one']],
+                        [
+                            [0, [0, 1], 1, 'formatted'],
+                            [0, [], 1, ' link']
+                        ],
+                        [[0, [], 0, 'three']]
+                    ]]
+                ]
+            }));
+
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [
+                        {
+                            children: [
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'one',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 1,
+                                    version: 1
+                                },
+                                {
+                                    children: [
+                                        {
+                                            children: [
+                                                {
+                                                    detail: 0,
+                                                    format: 1,
+                                                    mode: 'normal',
+                                                    style: '',
+                                                    text: 'formatted',
+                                                    type: 'text',
+                                                    version: 1
+                                                },
+                                                {
+                                                    detail: 0,
+                                                    format: 0,
+                                                    mode: 'normal',
+                                                    style: '',
+                                                    text: ' link',
+                                                    type: 'text',
+                                                    version: 1
+                                                }
+                                            ],
+                                            direction: 'ltr',
+                                            format: '',
+                                            indent: 0,
+                                            type: 'link',
+                                            rel: null,
+                                            target: null,
+                                            title: null,
+                                            url: 'https://koenig.ghost.org',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 2,
+                                    version: 1
+                                },
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'three',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 3,
+                                    version: 1
+                                }
+                            ],
+                            direction: 'ltr',
+                            format: '',
+                            indent: 0,
+                            tag: 'ul',
+                            type: 'list',
+                            listType: 'bullet',
+                            start: 1,
+                            version: 1
+                        }
+                    ],
+                    direction: 'ltr',
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
+
+        it('converts ordered lists', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: MOBILEDOC_VERSION,
+                ghostVersion: GHOST_VERSION,
+                atoms: [],
+                cards: [],
+                markups: [],
+                sections: [
+                    [3, 'ol', [
+                        [[0, [], 0, 'one']],
+                        [[0, [], 0, 'two']],
+                        [[0, [], 0, 'three']]
+                    ]]
+                ]
+            }));
+
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [
+                        {
+                            children: [
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'one',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 1,
+                                    version: 1
+                                },
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'two',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 2,
+                                    version: 1
+                                },
+                                {
+                                    children: [
+                                        {
+                                            detail: 0,
+                                            format: 0,
+                                            mode: 'normal',
+                                            style: '',
+                                            text: 'three',
+                                            type: 'text',
+                                            version: 1
+                                        }
+                                    ],
+                                    direction: 'ltr',
+                                    format: '',
+                                    indent: 0,
+                                    type: 'listitem',
+                                    value: 3,
+                                    version: 1
+                                }
+                            ],
+                            direction: 'ltr',
+                            format: '',
+                            indent: 0,
+                            tag: 'ol',
+                            type: 'list',
+                            listType: 'number',
+                            start: 1,
+                            version: 1
+                        }
+                    ],
+                    direction: 'ltr',
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
     });
 
     describe('cards', function () {
+        it('moves all payload data over', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: MOBILEDOC_VERSION,
+                ghostVersion: GHOST_VERSION,
+                atoms: [],
+                cards: [
+                    ['image', {
+                        version: 1,
+                        src: 'https://koenig.ghost.org/content/images/2023/05/flip-flop.png',
+                        width: 112,
+                        height: 112,
+                        title: '',
+                        alt: 'White-soled flip flop with black strap',
+                        caption: '<span>Flip flop</span>',
+                        cardWidth: 'regular',
+                        href: ''
+                    }]
+                ],
+                markups: [],
+                sections: [
+                    [10, 0]
+                ]
+            }));
+
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [
+                        {
+                            type: 'image',
+                            version: 1,
+                            src: 'https://koenig.ghost.org/content/images/2023/05/flip-flop.png',
+                            width: 112,
+                            height: 112,
+                            title: '',
+                            alt: 'White-soled flip flop with black strap',
+                            caption: '<span>Flip flop</span>',
+                            cardWidth: 'regular',
+                            href: ''
+                        }
+                    ],
+                    direction: null,
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
+
+        it('renames cards', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: MOBILEDOC_VERSION,
+                ghostVersion: GHOST_VERSION,
+                atoms: [],
+                cards: [
+                    ['code', {
+                        version: 1,
+                        code: 'testing'
+                    }]
+                ],
+                markups: [],
+                sections: [
+                    [10, 0]
+                ]
+            }));
+
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [
+                        {
+                            type: 'codeblock',
+                            version: 1,
+                            code: 'testing'
+                        }
+                    ],
+                    direction: null,
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
+
+        it('renames payload properties', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: MOBILEDOC_VERSION,
+                ghostVersion: GHOST_VERSION,
+                atoms: [],
+                cards: [
+                    ['embed', {
+                        version: 1,
+                        type: 'twitter'
+                    }]
+                ],
+                markups: [],
+                sections: [
+                    [10, 0]
+                ]
+            }));
+
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [
+                        {
+                            type: 'embed',
+                            version: 1,
+                            embedType: 'twitter'
+                        }
+                    ],
+                    direction: null,
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
+
+        it('renders paragraph when first section is a card', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: '0.3.2',
+                atoms: [],
+                cards: [
+                    ['test', {card: 1}]
+                ],
+                markups: [],
+                sections: [
+                    [10, 0],
+                    [1, 'p', []]
+                ]
+            }));
+
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [{
+                        type: 'test',
+                        card: 1
+                    }, {
+                        children: [],
+                        direction: null,
+                        format: '',
+                        indent: 0,
+                        type: 'paragraph',
+                        version: 1
+                    }],
+                    direction: null,
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
+    });
+
+    describe('card specifics', function () {
+        it('renames HR', function () {
+            const result = mobiledocToLexical(JSON.stringify({
+                version: MOBILEDOC_VERSION,
+                ghostVersion: GHOST_VERSION,
+                atoms: [],
+                cards: [
+                    ['hr', {
+                        version: 1
+                    }]
+                ],
+                markups: [],
+                sections: [
+                    [10, 0]
+                ]
+            }));
+
+            assert.equal(result, JSON.stringify({
+                root: {
+                    children: [
+                        {
+                            type: 'horizontalrule',
+                            version: 1
+                        }
+                    ],
+                    direction: null,
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+        });
     });
 });

@@ -2,11 +2,21 @@ import {assertHTML, focusEditor, html, initialize, pasteText} from '../../utils/
 import {test} from '@playwright/test';
 
 test.describe('Links', async () => {
-    test.beforeEach(async ({page}) => {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
-    test('converts selected text to link on url paste', async function ({page}) {
+    test.afterAll(async () => {
+        await page.close();
+    });
+
+    test('converts selected text to link on url paste', async function () {
         await focusEditor(page);
         await page.keyboard.type('link');
         await page.keyboard.down('Shift');
@@ -25,7 +35,7 @@ test.describe('Links', async () => {
         `);
     });
 
-    test('does not convert text to link if pasting a non-url', async function ({page}) {
+    test('does not convert text to link if pasting a non-url', async function () {
         await focusEditor(page);
         await page.keyboard.type('link');
         await page.keyboard.down('Shift');

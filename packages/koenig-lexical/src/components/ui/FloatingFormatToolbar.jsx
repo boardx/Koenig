@@ -17,7 +17,8 @@ export function FloatingFormatToolbar({
     isSnippetsEnabled,
     toolbarItemType,
     setToolbarItemType,
-    selectionRangeRect
+    selectionRangeRect,
+    hiddenFormats = []
 }) {
     const toolbarRef = React.useRef(null);
     const [arrowStyles, setArrowStyles] = React.useState(null);
@@ -37,9 +38,12 @@ export function FloatingFormatToolbar({
     }, [toolbarItemType, updateArrowStyles]);
 
     React.useEffect(() => {
-        document.addEventListener('mouseup', toggleVisibility);
+        document.addEventListener('mouseup', toggleVisibility); // desktop
+        document.addEventListener('touchend', toggleVisibility); // mobile
+
         return () => {
-            document.removeEventListener('mouseup', toggleVisibility);
+            document.removeEventListener('mouseup', toggleVisibility); // desktop
+            document.removeEventListener('touchend', toggleVisibility); // mobile
         };
     }, [toggleVisibility]);
 
@@ -93,6 +97,7 @@ export function FloatingFormatToolbar({
                 <FormatToolbar
                     arrowStyles={arrowStyles}
                     editor={editor}
+                    hiddenFormats={hiddenFormats}
                     isLinkSelected={!!href}
                     isSnippetsEnabled={isSnippetsEnabled}
                     onLinkClick={() => setToolbarItemType(toolbarItemTypes.link)}

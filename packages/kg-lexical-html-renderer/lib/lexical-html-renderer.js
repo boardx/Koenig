@@ -1,18 +1,22 @@
 class LexicalHTMLRenderer {
     constructor({nodes} = {}) {
+        const jsdom = require('jsdom');
+        const {JSDOM} = jsdom;
+
+        this.dom = new JSDOM();
         this.nodes = nodes || [];
     }
 
-    render(lexicalState, userOptions = {}) {
+    async render(lexicalState, userOptions = {}) {
         const {createHeadlessEditor} = require('@lexical/headless');
         const {ListItemNode, ListNode} = require('@lexical/list');
         const {HeadingNode, QuoteNode} = require('@lexical/rich-text');
         const {LinkNode} = require('@lexical/link');
-        const {HorizontalRuleNode} = require('./nodes/HorizontalRuleNode');
         const {$convertToHtmlString} = require('./convert-to-html-string');
 
         const defaultOptions = {
-            target: 'html'
+            target: 'html',
+            dom: this.dom
         };
         const options = Object.assign({}, defaultOptions, userOptions);
 
@@ -22,7 +26,6 @@ class LexicalHTMLRenderer {
             ListItemNode,
             QuoteNode,
             LinkNode,
-            HorizontalRuleNode,
             ...this.nodes
         ];
 

@@ -1,3 +1,5 @@
+import CollectionPlugin from '../plugins/CollectionPlugin';
+import EmEnDashPlugin from '../plugins/EmEnDashPlugin';
 import HorizontalRulePlugin from '../plugins/HorizontalRulePlugin';
 import HtmlPlugin from './HtmlPlugin';
 import ImagePlugin from '../plugins/ImagePlugin';
@@ -40,6 +42,7 @@ export const AllDefaultPlugins = () => {
             <GalleryPlugin />
             <VideoPlugin />
             <MarkdownPlugin />
+            <EmEnDashPlugin />
             <HorizontalRulePlugin />
             <CalloutPlugin />
             <HtmlPlugin />
@@ -55,6 +58,7 @@ export const AllDefaultPlugins = () => {
             <EmailPlugin />
             <EmbedPlugin />
             <SignupPlugin />
+            <CollectionPlugin />
 
             {/* Snippet Plugins */}
             <KoenigSnippetPlugin />

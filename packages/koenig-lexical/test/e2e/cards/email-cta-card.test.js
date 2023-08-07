@@ -1,4 +1,4 @@
-import {assertHTML, createSnippet, focusEditor, html, initialize} from '../../utils/e2e';
+import {assertHTML, createSnippet, focusEditor, html, initialize, isMac} from '../../utils/e2e';
 import {expect, test} from '@playwright/test';
 
 async function insertEmailCard(page) {
@@ -9,34 +9,42 @@ async function insertEmailCard(page) {
 }
 
 test.describe('Email card', async () => {
-    test.beforeEach(async ({page}) => {
+    const ctrlOrCmd = isMac() ? 'Meta' : 'Control';
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
+    test.afterAll(async () => {
+        await page.close();
+    });
+
     test.describe('import JSON', async () => {
-        test('can import a email CTA card node', async function ({page}) {
-            await page.evaluate(() => {
-                const serializedState = JSON.stringify({
-                    root: {
-                        children: [{
-                            type: 'email-cta',
-                            alignment: 'left',
-                            html: '<p>Hello</p>',
-                            segment: 'status:free',
-                            showButton: false,
-                            showDividers: false
-                        }],
-                        direction: 'ltr',
-                        format: '',
-                        indent: 0,
-                        type: 'root',
-                        version: 1
-                    }
-                });
-                const editor = window.lexicalEditor;
-                const editorState = editor.parseEditorState(serializedState);
-                editor.setEditorState(editorState);
-            });
+        test('can import a email CTA card node', async function () {
+            const contentParam = encodeURIComponent(JSON.stringify({
+                root: {
+                    children: [{
+                        type: 'email-cta',
+                        alignment: 'left',
+                        html: '<p>Hello</p>',
+                        segment: 'status:free',
+                        showButton: false,
+                        showDividers: false
+                    }],
+                    direction: 'ltr',
+                    format: '',
+                    indent: 0,
+                    type: 'root',
+                    version: 1
+                }
+            }));
+
+            await initialize({page, uri: `/#/?content=${contentParam}`});
 
             await assertHTML(page, html`
             <div data-lexical-decorator="true" contenteditable="false">
@@ -46,7 +54,7 @@ test.describe('Email card', async () => {
                         <div>Free members</div>
                         <div>
                             <div data-kg="editor">
-                                <div contenteditable="false" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none">
+                                <div contenteditable="false" role="textbox" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none" aria-readonly="true">
                                     <p dir="ltr"><span data-lexical-text="true">Hello</span></p>
                                 </div>
                             </div>
@@ -58,7 +66,7 @@ test.describe('Email card', async () => {
             `, {ignoreInnerSVG: true, ignoreCardToolbarContents: true});
         });
 
-        test('can import a email CTA card node with dividers', async function ({page}) {
+        test('can import a email CTA card node with dividers', async function () {
             await page.evaluate(() => {
                 const serializedState = JSON.stringify({
                     root: {
@@ -91,7 +99,7 @@ test.describe('Email card', async () => {
                         <hr />
                         <div>
                             <div data-kg="editor">
-                                <div contenteditable="false" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none">
+                                <div contenteditable="false" role="textbox" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none" aria-readonly="true">
                                     <p dir="ltr"><span data-lexical-text="true">Hello</span></p>
                                 </div>
                             </div>
@@ -104,7 +112,7 @@ test.describe('Email card', async () => {
             `, {ignoreInnerSVG: true, ignoreCardToolbarContents: true});
         });
 
-        test('can import a email CTA card node with centered content', async function ({page}) {
+        test('can import a email CTA card node with centered content', async function () {
             await page.evaluate(() => {
                 const serializedState = JSON.stringify({
                     root: {
@@ -137,9 +145,9 @@ test.describe('Email card', async () => {
                         <div class="pt-1 pb-7 font-sans text-xs font-semibold uppercase leading-8 tracking-tight text-grey
                         dark:text-grey-800">Free members</div>
                         <div
-                            class="koenig-lexical kg-inherit-styles w-full bg-transparent whitespace-normal font-serif text-xl text-grey-900 dark:text-grey-200 text-center">
+                            class="koenig-lexical kg-inherit-styles w-full bg-transparent whitespace-normal font-serif text-xl text-grey-900 dark:text-grey-200 text-center mx-auto [&amp;:has(.placeholder)]:w-fit [&amp;:has(.placeholder)]:text-left">
                             <div data-kg="editor">
-                                <div class="kg-prose" contenteditable="false" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none">
+                                <div class="kg-prose" contenteditable="false" role="textbox" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none" aria-readonly="true">
                                     <p dir="ltr"><span data-lexical-text="true">Hello</span></p>
                                 </div>
                             </div>
@@ -151,7 +159,7 @@ test.describe('Email card', async () => {
             `, {ignoreInnerSVG: true, ignoreCardToolbarContents: true, ignoreClasses: false});
         });
 
-        test('can import a email CTA card node with a button', async function ({page}) {
+        test('can import a email CTA card node with a button', async function () {
             await page.evaluate(() => {
                 const serializedState = JSON.stringify({
                     root: {
@@ -185,7 +193,7 @@ test.describe('Email card', async () => {
                         <div>Free members</div>
                         <div>
                             <div data-kg="editor">
-                                <div contenteditable="false" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none">
+                                <div contenteditable="false" role="textbox" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none" aria-readonly="true">
                                     <p dir="ltr"><span data-lexical-text="true">Hello</span></p>
                                 </div>
                             </div>
@@ -202,14 +210,14 @@ test.describe('Email card', async () => {
     });
 
     test.describe('settings panel', async () => {
-        test('renders a settings panel', async function ({page}) {
+        test('renders a settings panel', async function () {
             await focusEditor(page);
             await insertEmailCard(page);
 
             await expect(await page.getByTestId('settings-panel')).toBeVisible();
         });
 
-        test('allows to center content', async function ({page}) {
+        test('allows to center content', async function () {
             await focusEditor(page);
             await insertEmailCard(page);
 
@@ -222,7 +230,7 @@ test.describe('Email card', async () => {
             await expect(content).toHaveClass(/text-center/);
         });
 
-        test('allows to hide/show dividers', async function ({page}) {
+        test('allows to hide/show dividers', async function () {
             await focusEditor(page);
             await insertEmailCard(page);
 
@@ -245,7 +253,7 @@ test.describe('Email card', async () => {
             await expect(bottomDivider).toBeHidden();
         });
 
-        test('allows to show/hide a button', async function ({page}) {
+        test('allows to show/hide a button', async function () {
             await focusEditor(page);
             await insertEmailCard(page);
 
@@ -268,7 +276,7 @@ test.describe('Email card', async () => {
         });
     });
 
-    test('renders the email CTA card node with a settings panel from slash command', async function ({page}) {
+    test('renders the email CTA card node with a settings panel from slash command', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -281,11 +289,11 @@ test.describe('Email card', async () => {
                     <hr />
                     <div>
                         <div data-kg="editor">
-                            <div contenteditable="true" spellcheck="true" data-lexical-editor="true" role="textbox">
+                            <div contenteditable="true" role="textbox" spellcheck="true" data-lexical-editor="true">
                                 <p><br /></p>
                             </div>
                         </div>
-                        <div>Email only text... (optional)</div>
+                        <div><div>Email only text... (optional)</div></div>
                     </div>
                     <hr />
                 </div>
@@ -342,7 +350,7 @@ test.describe('Email card', async () => {
         `, {ignoreInnerSVG: true, ignoreCardToolbarContents: true});
     });
 
-    test('renders in display mode when unfocused', async function ({page}) {
+    test('renders in display mode when unfocused', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -357,7 +365,7 @@ test.describe('Email card', async () => {
         await expect(emailCard).toHaveAttribute('data-kg-card-editing', 'false');
     });
 
-    test('renders an action toolbar', async function ({page}) {
+    test('renders an action toolbar', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -375,7 +383,7 @@ test.describe('Email card', async () => {
         await expect(editButton).toBeVisible();
     });
 
-    test('is removed when left empty', async function ({page}) {
+    test('is removed when left empty', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -387,7 +395,7 @@ test.describe('Email card', async () => {
         await expect(emailCard).not.toBeVisible();
     });
 
-    test('it can contain lists', async function ({page}) {
+    test('it can contain lists', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -398,7 +406,7 @@ test.describe('Email card', async () => {
         await expect(emailCard).toHaveText('List item 1');
     });
 
-    test('can add snippet', async function ({page}) {
+    test('can add snippet', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -417,7 +425,7 @@ test.describe('Email card', async () => {
         await expect(await page.locator('[data-kg-card="email-cta"]')).toHaveCount(2);
     });
 
-    test('keeps focus on previous editor when changing size opts', async function ({page}) {
+    test('keeps focus on previous editor when changing size opts', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -433,5 +441,37 @@ test.describe('Email card', async () => {
         // Expect content to have 'Hello World'
         const content = page.locator('[data-kg-card="email-cta"] > div > div.koenig-lexical');
         await expect(content).toHaveText('Hello world');
+    });
+
+    test('can undo/redo without losing html content', async function () {
+        await focusEditor(page);
+        await insertEmailCard(page);
+
+        await page.keyboard.type('Hello');
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.press(`${ctrlOrCmd}+z`);
+
+        await assertHTML(page, html`
+            <div data-lexical-decorator="true" contenteditable="false">
+                <div><svg></svg></div>
+                <div data-kg-card-editing="false" data-kg-card-selected="false" data-kg-card="email-cta">
+                    <div>
+                        <div>Free members</div>
+                        <hr />
+                        <div>
+                            <div data-kg="editor">
+                                <div contenteditable="false" role="textbox" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none" aria-readonly="true">
+                                    <p dir="ltr"><span data-lexical-text="true">Hello</span></p>
+                                </div>
+                            </div>
+                        </div>
+                        <hr />
+                        <div></div>
+                    </div>
+                </div>
+            </div>
+            <p><br /></p>
+            `, {ignoreInnerSVG: true, ignoreCardToolbarContents: true});
     });
 });

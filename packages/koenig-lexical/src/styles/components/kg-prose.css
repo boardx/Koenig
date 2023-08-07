@@ -309,7 +309,7 @@
             ul,
             ol
         ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            font-family: georgia,serif;
+            font-family: georgia,Times,serif;
             font-weight: 400;
             line-height: 1.6em;
             font-size: 2.0rem;
@@ -420,6 +420,18 @@
         }
 
         :where(
+            ul ul li
+        ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
+            list-style-type: circle;
+        }
+
+        :where(
+            ul ul ul li
+        ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
+            list-style-type: square;
+        }
+
+        :where(
             ol li
         ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
             display: list-item;
@@ -433,6 +445,18 @@
             ol li:first-child
         ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
             margin: 0 0 0 2.2rem;
+        }
+
+        :where(
+            ol ol li
+        ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
+            list-style-type: lower-alpha;
+        }
+
+        :where(
+            ol ol ol li
+        ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
+            list-style-type: lower-roman;
         }
 
         :where(
@@ -646,6 +670,12 @@
             margin: 3.2rem 0 0;
         }
 
+        > :where(
+            div[data-kg-card-width="full"] + div[data-kg-card-width="full"]
+        ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
+            margin: 0;
+        }
+
         :where(
             p + div,
             blockquote + div,
@@ -749,6 +779,8 @@
     }
 }
 
+/* stylelint-disable at-rule-disallowed-list */
+
 .koenig-lexical-caption {
     .kg-prose {
         :where(
@@ -758,48 +790,12 @@
                     ul,
                     ol
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            font-family: "Inter", -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif;
-            line-height: 1.6em;
-            font-size: 1.4rem;
+                    @apply text-sm font-sans leading-relaxed;
         }
     }
 }
 
-.koenig-lexical-product-title {
-        .kg-prose {
-            :where(
-                        p,
-                        blockquote,
-                        aside,
-                        ul,
-                        ol
-                    ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif;
-                line-height: 1.375;
-                font-size: 2.2rem;
-                font-weight: bold;
-                letter-spacing: -0.025em;
-            }
-        }
-    }
-
-.koenig-lexical-product-description {
-        .kg-prose {
-            :where(
-                        p,
-                        blockquote,
-                        aside,
-                        ul,
-                        ol
-                    ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-                font-family: "Inter", -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif;
-                line-height: 1.375;
-                font-size: 1.6rem;
-            }
-        }
-    }
-
-.koenig-lexical-toggle-heading {
+.koenig-lexical-section-title {
     .kg-prose {
         :where(
                     p,
@@ -808,38 +804,17 @@
                     ul,
                     ol
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            font-family: "Inter", -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, ubuntu, roboto, noto, segoe ui, arial, sans-serif;
-            line-height: 1.375;
-            font-size: 2.2rem !important;
-            font-weight: bold;
-            letter-spacing: -0.025em;
+                    @apply text-md uppercase font-sans leading-normal font-bold tracking-tight;
         }
         :where(
                     strong
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            font-weight: 800;
+            @apply !font-extrabold;
         }
     }
 }
 
-.koenig-lexical-toggle-description {
-    .kg-prose {
-        :where(
-                    p,
-                    blockquote,
-                    aside,
-                    ul,
-                    ol
-                ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            font-family: georgia,serif;
-            line-height: 1.5;
-        }
-    }
-}
-
-/* stylelint-disable at-rule-disallowed-list */
-
-.koenig-lexical-header-heading {
+.koenig-lexical-heading {
     .kg-prose {
         :where(
                     p,
@@ -851,14 +826,29 @@
                     @apply font-sans !leading-[1.1] font-bold tracking-tight;
         }
         :where(
-                    strong
+                    a,
+                    a span
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            @apply font-extrabold;
+            @apply !text-current;
         }
     }
 }
 
-.koenig-lexical-header-heading.koenig-lexical-header-xsmall {
+.koenig-lexical-heading.heading-small {
+    .kg-prose {
+        :where(
+                    p,
+                    blockquote,
+                    aside,
+                    ul,
+                    ol
+                ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
+            @apply text-2xl;
+        }
+    }
+}
+
+.koenig-lexical-heading.heading-medium {
     .kg-prose {
         :where(
                     p,
@@ -872,7 +862,7 @@
     }
 }
 
-.koenig-lexical-header-heading.koenig-lexical-header-small {
+.koenig-lexical-heading.heading-large {
     .kg-prose {
         :where(
                     p,
@@ -886,35 +876,7 @@
     }
 }
 
-.koenig-lexical-header-heading.koenig-lexical-header-medium {
-    .kg-prose {
-        :where(
-                    p,
-                    blockquote,
-                    aside,
-                    ul,
-                    ol
-                ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            @apply text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl;
-        }
-    }
-}
-
-.koenig-lexical-header-heading.koenig-lexical-header-large {
-    .kg-prose {
-        :where(
-                    p,
-                    blockquote,
-                    aside,
-                    ul,
-                    ol
-                ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl;
-        }
-    }
-}
-
-.koenig-lexical-header-subheading {
+.koenig-lexical-subheading {
     .kg-prose {
         :where(
                     p,
@@ -928,12 +890,18 @@
         :where(
                     strong
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            @apply font-extrabold;
+            @apply font-bold;
+        }
+        :where(
+                    a,
+                    a span
+                ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
+            @apply !text-current;
         }
     }
 }
 
-.koenig-lexical-header-subheading.koenig-lexical-header-xsmall {
+.koenig-lexical-subheading.subheading-xsmall {
     .kg-prose {
         :where(
                     p,
@@ -942,12 +910,12 @@
                     ul,
                     ol
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            @apply text-[1.6rem];
+            @apply text-[1.6rem] font-normal;
         }
     }
 }
 
-.koenig-lexical-header-subheading.koenig-lexical-header-small {
+.koenig-lexical-subheading.subheading-small {
     .kg-prose {
         :where(
                     p,
@@ -961,7 +929,7 @@
     }
 }
 
-.koenig-lexical-header-subheading.koenig-lexical-header-medium {
+.koenig-lexical-subheading.subheading-medium {
     .kg-prose {
         :where(
                     p,
@@ -970,12 +938,12 @@
                     ul,
                     ol
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            @apply text-lg sm:text-xl md:text-2xl;
+            @apply text-lg sm:text-xl md:text-[2.2rem];
         }
     }
 }
 
-.koenig-lexical-header-subheading.koenig-lexical-header-large {
+.koenig-lexical-subheading.subheading-large {
     .kg-prose {
         :where(
                     p,
@@ -984,7 +952,7 @@
                     ul,
                     ol
                 ):not(:where(.not-kg-prose, [class~='not-kg-prose'] *)) {
-            @apply text-xl md:text-2xl xl:text-3xl;
+            @apply text-lg sm:text-xl md:text-[2.2rem] lg:text-[2.6rem];
         }
     }
 }

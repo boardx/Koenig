@@ -1,4 +1,4 @@
-import {assertHTML, createSnippet, focusEditor, html, initialize} from '../../utils/e2e';
+import {assertHTML, createSnippet, focusEditor, html, initialize, isMac} from '../../utils/e2e';
 import {expect, test} from '@playwright/test';
 
 async function insertEmailCard(page) {
@@ -9,29 +9,37 @@ async function insertEmailCard(page) {
 }
 
 test.describe('Email card', async () => {
-    test.beforeEach(async ({page}) => {
+    const ctrlOrCmd = isMac() ? 'Meta' : 'Control';
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
-    test('can import serialized email card nodes', async function ({page}) {
-        await page.evaluate(() => {
-            const serializedState = JSON.stringify({
-                root: {
-                    children: [{
-                        type: 'email',
-                        html: '<p>A paragraph</p>'
-                    }],
-                    direction: 'ltr',
-                    format: '',
-                    indent: 0,
-                    type: 'root',
-                    version: 1
-                }
-            });
-            const editor = window.lexicalEditor;
-            const editorState = editor.parseEditorState(serializedState);
-            editor.setEditorState(editorState);
-        });
+    test.afterAll(async () => {
+        await page.close();
+    });
+
+    test('can import serialized email card nodes', async function () {
+        const contentParam = encodeURIComponent(JSON.stringify({
+            root: {
+                children: [{
+                    type: 'email',
+                    html: '<p>A paragraph</p>'
+                }],
+                direction: 'ltr',
+                format: '',
+                indent: 0,
+                type: 'root',
+                version: 1
+            }
+        }));
+
+        await initialize({page, uri: `/#/?content=${contentParam}`});
 
         await assertHTML(page, html`
         <div data-lexical-decorator="true" contenteditable="false">
@@ -40,7 +48,7 @@ test.describe('Email card', async () => {
                 <div>
                     <div>
                         <div data-kg="editor">
-                            <div contenteditable="false" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none">
+                            <div contenteditable="false" role="textbox" spellcheck="true" data-lexical-editor="true" aria-autocomplete="none" aria-readonly="true">
                                 <p dir="ltr">
                                     <span data-lexical-text="true">A paragraph</span>
                                 </p>
@@ -54,7 +62,7 @@ test.describe('Email card', async () => {
         `, {ignoreInnerSVG: true, ignoreCardToolbarContents: true});
     });
 
-    test('renders email card node in edit mode from slash command', async function ({page}) {
+    test('renders email card node in edit mode from slash command', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -65,7 +73,7 @@ test.describe('Email card', async () => {
                 <div>
                     <div>
                         <div data-kg="editor">
-                            <div contenteditable="true" spellcheck="true" data-lexical-editor="true" role="textbox">
+                            <div contenteditable="true" role="textbox" spellcheck="true" data-lexical-editor="true">
                                 <p dir="ltr">
                                   <span data-lexical-text="true">Hey</span>
                                   <code data-lexical-text="true">
@@ -89,7 +97,7 @@ test.describe('Email card', async () => {
         `, {ignoreInnerSVG: true, ignoreCardToolbarContents: true});
     });
 
-    test('contains `Hey {first_name, "there"}` by default when rendered', async function ({page}) {
+    test('contains `Hey {first_name, "there"}` by default when rendered', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -97,7 +105,7 @@ test.describe('Email card', async () => {
         await expect(htmlContent).toContainText('Hey {first_name, "there"},');
     });
 
-    test('renders in display mode when unfocused', async function ({page}) {
+    test('renders in display mode when unfocused', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -108,7 +116,7 @@ test.describe('Email card', async () => {
         await expect(emailCard).toHaveAttribute('data-kg-card-editing', 'false');
     });
 
-    test('renders an action toolbar', async function ({page}) {
+    test('renders an action toolbar', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -119,7 +127,7 @@ test.describe('Email card', async () => {
         await expect(editButton).toBeVisible();
     });
 
-    test('is removed when left empty', async function ({page}) {
+    test('is removed when left empty', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -135,7 +143,7 @@ test.describe('Email card', async () => {
         await expect(emailCard).not.toBeVisible();
     });
 
-    test('it can contain lists', async function ({page}) {
+    test('it can contain lists', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -148,7 +156,7 @@ test.describe('Email card', async () => {
         await expect(emailCard).toHaveText('List item 1');
     });
 
-    test('can add snippet', async function ({page}) {
+    test('can add snippet', async function () {
         await focusEditor(page);
         await insertEmailCard(page);
 
@@ -162,5 +170,20 @@ test.describe('Email card', async () => {
         await page.waitForSelector('[data-kg-cardmenu-selected="true"]');
         await page.keyboard.press('Enter');
         await expect(await page.locator('[data-kg-card="email"]')).toHaveCount(2);
+    });
+
+    test('can undo/redo without losing html content', async function () {
+        await focusEditor(page);
+        await insertEmailCard(page);
+
+        await page.keyboard.press('Enter');
+        await page.keyboard.type('- List item 1');
+        await page.keyboard.press('Enter');
+        await page.keyboard.press('Escape');
+        await page.keyboard.press('Backspace');
+        await page.keyboard.press(`${ctrlOrCmd}+z`);
+
+        const emailCard = page.locator('[data-kg-card="email"] ul > li:first-child');
+        await expect(emailCard).toHaveText('List item 1');
     });
 });

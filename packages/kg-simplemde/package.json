@@ -1,6 +1,6 @@
 {
   "name": "@tryghost/kg-simplemde",
-  "version": "2.0.15",
+  "version": "2.0.18",
   "description": "A simple, beautiful, and embeddable JavaScript Markdown editor. Features autosaving and spell checking.",
   "keywords": [
     "embeddable",
@@ -44,7 +44,7 @@
     "url": "https://github.com/NextStepWebs/simplemde-markdown-editor"
   },
   "dependencies": {
-    "codemirror": "5.65.13",
+    "codemirror": "5.65.14",
     "codemirror-spell-checker": "1.1.2",
     "marked": "0.3.19"
   }

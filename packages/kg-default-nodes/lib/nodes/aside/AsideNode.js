@@ -12,7 +12,6 @@ export class AsideNode extends ElementNode {
         );
     }
 
-    // used by `@tryghost/url-utils` to transform URLs contained in the serialized JSON
     static get urlTransformMap() {
         return {};
     }
@@ -45,8 +44,7 @@ export class AsideNode extends ElementNode {
 
     /* c8 ignore start */
     createDOM() {
-        const element = document.createElement('div');
-        return element;
+        return document.createElement('div');
     }
 
     updateDOM() {

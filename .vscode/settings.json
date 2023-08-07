@@ -1,0 +1,10 @@
+{
+  "eslint.workingDirectories": [
+    {
+      "pattern": "./packages/*/"
+    }
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true}
+}

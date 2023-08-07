@@ -2,13 +2,23 @@ import {assertHTML, assertSelection, focusEditor, html, initialize} from '../uti
 import {expect, test} from '@playwright/test';
 
 test.describe('Title behaviour (ExternalControlPlugin)', async () => {
-    test.beforeEach(async ({page}) => {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
+    });
+
+    test.afterAll(async () => {
+        await page.close();
     });
 
     test.describe('in title', function () {
         test.describe('ENTER', function () {
-            test('moves cursor to blank editor', async function ({page}) {
+            test('moves cursor to blank editor', async function () {
                 await page.getByTestId('post-title').click();
                 await page.keyboard.press('Enter');
 
@@ -26,7 +36,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 `);
             });
 
-            test('adds paragraph and moves cursor to populated editor', async function ({page}) {
+            test('adds paragraph and moves cursor to populated editor', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('Populated editor');
 
@@ -50,7 +60,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
         });
 
         test.describe('TAB', function () {
-            test('moves cursor to blank editor', async function ({page}) {
+            test('moves cursor to blank editor', async function () {
                 await page.getByTestId('post-title').click();
                 await page.keyboard.press('Tab');
 
@@ -70,7 +80,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
         });
 
         test.describe('ARROW RIGHT', function () {
-            test('moves cursor to editor when title is blank', async function ({page}) {
+            test('moves cursor to editor when title is blank', async function () {
                 await page.getByTestId('post-title').click();
                 await page.keyboard.press('ArrowRight');
 
@@ -88,7 +98,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 `);
             });
 
-            test('moves cursor to editor when cursor at end of title', async function ({page}) {
+            test('moves cursor to editor when cursor at end of title', async function () {
                 await page.getByTestId('post-title').click();
                 await page.keyboard.type('Populated title');
                 await page.keyboard.press('ArrowLeft');
@@ -113,7 +123,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
         });
 
         test.describe('ARROW DOWN', function () {
-            test('moves cursor to editor when title is blank', async function ({page}) {
+            test('moves cursor to editor when title is blank', async function () {
                 await page.getByTestId('post-title').click();
                 await page.keyboard.press('ArrowDown');
 
@@ -125,7 +135,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 });
             });
 
-            test('moves cursor to editor when cursor at end of title', async function ({page}) {
+            test('moves cursor to editor when cursor at end of title', async function () {
                 await page.getByTestId('post-title').click();
                 await page.keyboard.type('Populated title');
                 await page.keyboard.press('ArrowLeft');
@@ -150,9 +160,9 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(false);
             });
 
-            test('selects card if that is first section in doc', async function ({page}) {
+            test('selects card if that is first section in doc', async function () {
                 await focusEditor(page);
-                await page.keyboard.type('--- ');
+                await page.keyboard.type('---');
 
                 await page.getByTestId('post-title').click();
                 await page.keyboard.press('ArrowDown');
@@ -186,7 +196,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
 
     test.describe('in editor', function () {
         test.describe('ARROW UP', function () {
-            test('at start of paragraph doc moves cursor to title', async function ({page}) {
+            test('at start of paragraph doc moves cursor to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.press('ArrowUp');
 
@@ -195,7 +205,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(true);
             });
 
-            test('at start of list at top of doc moves to title', async function ({page}) {
+            test('at start of list at top of doc moves to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('- ');
                 await page.keyboard.press('ArrowUp');
@@ -205,9 +215,9 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(true);
             });
 
-            test('with selected card at start of doc moves to title', async function ({page}) {
+            test('with selected card at start of doc moves to title', async function () {
                 await focusEditor(page);
-                await page.keyboard.type('--- ');
+                await page.keyboard.type('---');
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowUp');
 
@@ -224,7 +234,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 `);
             });
 
-            test('with non-collapsed selection at start of doc does not move to title', async function ({page}) {
+            test('with non-collapsed selection at start of doc does not move to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('Test');
                 await page.keyboard.press('Shift+ArrowLeft');
@@ -256,7 +266,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 });
             });
 
-            test('at middle of doc does not move to title', async function ({page}) {
+            test('at middle of doc does not move to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('One');
                 await page.keyboard.press('Enter');
@@ -267,11 +277,11 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(false);
             });
 
-            test('with selected card in middle of doc does not move to title', async function ({page}) {
+            test('with selected card in middle of doc does not move to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('One');
                 await page.keyboard.press('Enter');
-                await page.keyboard.type('--- ');
+                await page.keyboard.type('---');
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowUp');
 
@@ -282,7 +292,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
         });
 
         test.describe('ARROW LEFT', function () {
-            test('at start of paragraph doc moves cursor to title', async function ({page}) {
+            test('at start of paragraph doc moves cursor to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.press('ArrowLeft');
 
@@ -291,7 +301,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(true);
             });
 
-            test('at start of list at top of doc moves to title', async function ({page}) {
+            test('at start of list at top of doc moves to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('- ');
                 await page.keyboard.press('ArrowLeft');
@@ -301,9 +311,9 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(true);
             });
 
-            test('with selected card at start of doc moves to title', async function ({page}) {
+            test('with selected card at start of doc moves to title', async function () {
                 await focusEditor(page);
-                await page.keyboard.type('--- ');
+                await page.keyboard.type('---');
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowLeft');
 
@@ -320,7 +330,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 `);
             });
 
-            test('with non-collapsed selection at start of doc does not move to title', async function ({page}) {
+            test('with non-collapsed selection at start of doc does not move to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('Test');
                 await page.keyboard.press('Shift+ArrowLeft');
@@ -352,7 +362,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 });
             });
 
-            test('at middle of doc does not move to title', async function ({page}) {
+            test('at middle of doc does not move to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('One');
                 await page.keyboard.press('Enter');
@@ -363,11 +373,11 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(false);
             });
 
-            test('with selected card in middle of doc does not move to title', async function ({page}) {
+            test('with selected card in middle of doc does not move to title', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('One');
                 await page.keyboard.press('Enter');
-                await page.keyboard.type('--- ');
+                await page.keyboard.type('---');
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('ArrowLeft');
 
@@ -378,7 +388,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
         });
 
         test.describe('SHIFT+TAB', function () {
-            test('moves cursor to title when not dedenting', async function ({page}) {
+            test('moves cursor to title when not dedenting', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('Test');
                 await page.keyboard.press('Shift+Tab');
@@ -388,24 +398,9 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(true);
             });
 
-            test('dedents rather than moving cursor when necessary', async function ({page}) {
+            test('moves cursor to title when card is selected', async function () {
                 await focusEditor(page);
-                await page.keyboard.type('Test');
-                await page.keyboard.press('Tab');
-                await page.keyboard.press('Shift+Tab');
-
-                const title = page.getByTestId('post-title');
-                let titleHasFocus = await title.evaluate(node => document.activeElement === node);
-                expect(titleHasFocus).toEqual(false);
-
-                await assertHTML(page, html`
-                    <p dir="ltr"><span data-lexical-text="true">Test</span></p>
-                `);
-            });
-
-            test('moves cursor to title when card is selected', async function ({page}) {
-                await focusEditor(page);
-                await page.keyboard.type('--- ');
+                await page.keyboard.type('---');
                 await page.keyboard.press('ArrowUp');
                 await page.keyboard.press('Shift+Tab');
 
@@ -414,7 +409,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(true);
             });
 
-            test('moves cursor to title when a range is selected with no indents', async function ({page}) {
+            test('moves cursor to title when a range is selected with no indents', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('Test');
                 await page.keyboard.press('Shift+ArrowLeft');
@@ -428,7 +423,7 @@ test.describe('Title behaviour (ExternalControlPlugin)', async () => {
                 expect(titleHasFocus).toEqual(true);
             });
 
-            test('does not move cursor to title if a range selection would outdent something', async function ({page}) {
+            test('does not move cursor to title if a range selection would outdent something', async function () {
                 await focusEditor(page);
                 await page.keyboard.type('Test');
                 await page.keyboard.press('Enter');

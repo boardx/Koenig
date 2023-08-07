@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import {sanitizeHtml} from '../../../utils/sanitize-html';
 
-export function HtmlCard({html, updateHtml, isEditing, darkMode}) {
+export function HtmlCard({html, updateHtml, isEditing, darkMode, onBlur}) {
     return (
         <>
             {isEditing
@@ -13,6 +13,7 @@ export function HtmlCard({html, updateHtml, isEditing, darkMode}) {
                         darkMode={darkMode}
                         html={html}
                         updateHtml={updateHtml}
+                        onBlur={onBlur}
                     />
                 )
                 : <div><HtmlDisplay html={html} /><div className="absolute inset-0 z-50 mt-0"></div></div>
@@ -24,7 +25,7 @@ export function HtmlCard({html, updateHtml, isEditing, darkMode}) {
 function HtmlDisplay({html}) {
     const sanitizedHtml = sanitizeHtml(html, {replaceJS: true});
 
-    return <div dangerouslySetInnerHTML={{__html: sanitizedHtml}} className="whitespace-normal"></div>;
+    return <div dangerouslySetInnerHTML={{__html: sanitizedHtml}} className="min-h-[3.5vh] whitespace-normal"></div>;
 }
 
 HtmlDisplay.propTypes = {
@@ -35,5 +36,6 @@ HtmlCard.propTypes = {
     html: PropTypes.string,
     updateHtml: PropTypes.func,
     isEditing: PropTypes.bool,
-    darkMode: PropTypes.bool
+    darkMode: PropTypes.bool,
+    onBlur: PropTypes.func
 };

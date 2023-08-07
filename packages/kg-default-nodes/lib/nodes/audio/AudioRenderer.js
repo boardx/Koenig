@@ -1,33 +1,32 @@
 import {addCreateDocumentOption} from '../../utils/add-create-document-option';
+import {renderEmptyContainer} from '../../utils/render-empty-container';
 
-export function renderAudioNodeToDOM(node, options = {}) {
+export function renderAudioNode(node, options = {}) {
     addCreateDocumentOption(options);
-
     const document = options.createDocument();
 
-    if (!node.getSrc() || node.getSrc().trim() === '') {
-        return document.createTextNode('');
+    if (!node.src || node.src.trim() === '') {
+        return renderEmptyContainer(document);
     }
 
-    return frontendTemplate(node, document);
+    const thumbnailCls = getThumbnailCls(node);
+    const emptyThumbnailCls = getEmptyThumbnailCls(node);
+
+    if (options.target === 'email') {
+        return emailTemplate(node, document, options, thumbnailCls, emptyThumbnailCls);
+    } else {
+        return frontendTemplate(node, document, thumbnailCls, emptyThumbnailCls);
+    }
 }
 
-function frontendTemplate(node, document) {
-    let thumbnailCls = 'kg-audio-thumbnail';
-    let emptyThumbnailCls = 'kg-audio-thumbnail placeholder';
-    if (!node.getThumbnailSrc()) {
-        thumbnailCls += ' kg-audio-hide';
-    } else {
-        emptyThumbnailCls += ' kg-audio-hide';
-    }
-
-    const cardDiv = document.createElement('div');
-    cardDiv.setAttribute('class', 'kg-card kg-audio-card');
+function frontendTemplate(node, document, thumbnailCls, emptyThumbnailCls) {
+    const element = document.createElement('div');
+    element.setAttribute('class', 'kg-card kg-audio-card');
     const img = document.createElement('img');
-    img.src = node.getThumbnailSrc();
+    img.src = node.thumbnailSrc;
     img.alt = 'audio-thumbnail';
     img.setAttribute('class', thumbnailCls);
-    cardDiv.appendChild(img);
+    element.appendChild(img);
 
     const emptyThumbnailDiv = document.createElement('div');
     emptyThumbnailDiv.setAttribute('class', emptyThumbnailCls);
@@ -52,19 +51,19 @@ function frontendTemplate(node, document) {
     svg.appendChild(path3);
     emptyThumbnailDiv.appendChild(svg);
 
-    cardDiv.appendChild(emptyThumbnailDiv);
+    element.appendChild(emptyThumbnailDiv);
 
     const audioPlayerContainer = document.createElement('div');
     audioPlayerContainer.setAttribute('class', 'kg-audio-player-container');
 
     const audioElement = document.createElement('audio');
-    audioElement.setAttribute('src', node.getSrc());
+    audioElement.setAttribute('src', node.src);
     audioElement.setAttribute('preload', 'metadata');
     audioPlayerContainer.appendChild(audioElement);
 
     const audioTitle = document.createElement('div');
     audioTitle.setAttribute('class', 'kg-audio-title');
-    audioTitle.textContent = node.getTitle();
+    audioTitle.textContent = node.title;
     audioPlayerContainer.appendChild(audioTitle);
 
     const audioPlayer = document.createElement('div');
@@ -112,7 +111,7 @@ function frontendTemplate(node, document) {
     audioDurationTotal.textContent = '/';
     const audioDUrationNode = document.createElement('span');
     audioDUrationNode.setAttribute('class', 'kg-audio-duration');
-    audioDUrationNode.textContent = node.getDuration();
+    audioDUrationNode.textContent = node.duration;
     audioDurationTotal.appendChild(audioDUrationNode);
     audioPlayer.appendChild(audioDurationTotal);
 
@@ -156,7 +155,88 @@ function frontendTemplate(node, document) {
     audioPlayer.appendChild(volumeSlider);
 
     audioPlayerContainer.appendChild(audioPlayer);
-    cardDiv.appendChild(audioPlayerContainer);
+    element.appendChild(audioPlayerContainer);
 
-    return cardDiv;
+    return {element};
+}
+
+function emailTemplate(node, document, options, thumbnailCls, emptyThumbnailCls) {
+    const html = (`
+        <table cellspacing="0" cellpadding="0" border="0" class="kg-audio-card">
+                <tr>
+                    <td>
+                        <table cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                                <td width="60">
+                                    <a href="${options.postUrl}" style="display: block; width: 60px; height: 60px; padding-top: 4px; padding-right: 16px; padding-bottom: 4px; padding-left: 4px; border-radius: 2px;">
+                                        ${node.thumbnailSrc ? `
+                                        <img src="${node.thumbnailSrc}" class="${thumbnailCls}" style="width: 60px; height: 60px; object-fit: cover; border: 0; border-radius: 2px;">
+                                        ` : `
+                                        <img src="https://static.ghost.org/v4.0.0/images/audio-file-icon.png" class="${emptyThumbnailCls}" style="width: 24px; height: 24px; padding: 18px; border-radius: 2px;">
+                                        `}
+                                    </a>
+                                </td>
+                                <td style="position: relative; vertical-align: center;" valign="middle">
+                                    <a href="${options.postUrl}" style="position: absolute; display: block; top: 0; right: 0; bottom: 0; left: 0;"></a>
+                                    <table cellspacing="0" cellpadding="0" border="0" width="100%">
+                                        <tr>
+                                            <td>
+                                                <a href="${options.postUrl}" class="kg-audio-title">${node.title}</a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <table cellspacing="0" cellpadding="0" border="0" width="100%">
+                                                    <tr>
+                                                        <td width="24" style="vertical-align: middle;" valign="middle">
+                                                            <a href="${options.postUrl}" class="kg-audio-play-button"></a>
+                                                        </td>
+                                                        <td style="vertical-align: middle;" valign="middle">
+                                                            <a href="${options.postUrl}" class="kg-audio-duration">${getFormattedDuration(node.duration)}<span class="kg-audio-link"> • Click to play audio</span></a>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+            `);
+
+    const container = document.createElement('div');
+    container.innerHTML = html.trim();
+
+    return {element: container.firstElementChild};
+}
+
+function getThumbnailCls(node) {
+    let thumbnailCls = 'kg-audio-thumbnail';
+
+    if (!node.thumbnailSrc) {
+        thumbnailCls += ' kg-audio-hide';
+    }
+
+    return thumbnailCls;
+}
+
+function getEmptyThumbnailCls(node) {
+    let emptyThumbnailCls = 'kg-audio-thumbnail placeholder';
+
+    if (node.thumbnailSrc) {
+        emptyThumbnailCls += ' kg-audio-hide';
+    }
+
+    return emptyThumbnailCls;
+}
+
+function getFormattedDuration(duration = 200) {
+    const minutes = Math.floor(duration / 60);
+    const seconds = Math.floor(duration - (minutes * 60));
+    const paddedSeconds = String(seconds).padStart(2, '0');
+    const formattedDuration = `${minutes}:${paddedSeconds}`;
+    return formattedDuration;
 }

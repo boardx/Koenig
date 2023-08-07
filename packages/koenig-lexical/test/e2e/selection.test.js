@@ -2,18 +2,28 @@ import {assertHTML, assertSelection, dragMouse, focusEditor, html, initialize} f
 import {test} from '@playwright/test';
 
 test.describe('Selection behaviour', async () => {
-    test.beforeEach(async function ({page}) {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
+    });
+
+    test.afterAll(async () => {
+        await page.close();
     });
 
     // TODO: skipped because Playwright doesn't fire the `click` event when the
     // mouse is released after a drag meaning it wasn't triggering the buggy behaviour.
     // Unskip when this is fixed: https://github.com/microsoft/playwright/issues/20717
-    test.skip('can create range selection covering a card', async function ({page}) {
+    test.skip('can create range selection covering a card', async function () {
         await focusEditor(page);
         await page.keyboard.type('First paragraph');
         await page.keyboard.press('Enter');
-        await page.keyboard.type('--- ');
+        await page.keyboard.type('---');
         await page.keyboard.type('Second paragraph');
 
         const firstPBoundingBox = await page.locator('p').nth(0).boundingBox();
@@ -32,11 +42,11 @@ test.describe('Selection behaviour', async () => {
         });
     });
 
-    test('cards do not show as selected in range selections', async function ({page}) {
+    test('cards do not show as selected in range selections', async function () {
         await focusEditor(page);
         await page.keyboard.type('First paragraph');
         await page.keyboard.press('Enter');
-        await page.keyboard.type('--- ');
+        await page.keyboard.type('---');
         await page.keyboard.type('Second paragraph');
 
         const firstPBoundingBox = await page.locator('p').nth(0).boundingBox();
@@ -51,7 +61,73 @@ test.describe('Selection behaviour', async () => {
                     <hr>
                 </div>
             </div>
-            <p><span data-lexical-text="true">Second paragraph</span></p>
+            <p dir="ltr"><span data-lexical-text="true">Second paragraph</span></p>
         `);
+    });
+
+    test.describe('select all - cmd + a', () => {
+        test('works with first and end nodes being paragraphs', async function () {
+            await focusEditor(page);
+            await page.keyboard.type('First paragraph');
+            await page.keyboard.press('Enter');
+            await page.keyboard.type('---');
+            await page.keyboard.type('Second paragraph');
+
+            await page.keyboard.down('Meta');
+            await page.keyboard.press('a');
+            await page.keyboard.up('Meta');
+
+            await assertSelection(page, {
+                anchorPath: [0, 0, 0],
+                anchorOffset: 0,
+                focusPath: [2, 0, 0],
+                focusOffset: 16
+            });
+        });
+
+        test('works with first and end nodes being empty paragraphs', async function () {
+            await focusEditor(page);
+            await page.keyboard.press('Enter');
+            await page.keyboard.type('---');
+
+            await page.keyboard.down('Meta');
+            await page.keyboard.press('a');
+            await page.keyboard.up('Meta');
+
+            await assertSelection(page, {
+                anchorPath: [],
+                anchorOffset: 0,
+                focusPath: [],
+                focusOffset: 3
+            });
+        });
+
+        // // not sure why this is returning 0 for the focus offset.. this test DOES work, but offset should be 3
+        // // TODO: may be related to why we don't see text selection while first and last nodes are cards/decorators?
+        // //  if we spy on window.selection() we can see that the selection is correct (offset = 3), just not in the test
+        // test('works with first and end nodes being cards', async function () {
+        //     await focusEditor(page);
+        //     await page.keyboard.type('``` ');
+        //     await page.keyboard.type('Some code');
+        //     await page.keyboard.press('Meta+Enter');
+
+        //     await page.keyboard.type('Some text');
+        //     await page.keyboard.press('Enter');
+
+        //     await page.keyboard.type('``` ');
+        //     await page.keyboard.type('Some code');
+        //     await page.keyboard.press('Meta+Enter');
+
+        //     await page.keyboard.down('Meta');
+        //     await page.keyboard.press('a');
+        //     await page.keyboard.up('Meta');
+
+        //     await assertSelection(page, {
+        //         anchorPath: [],
+        //         anchorOffset: 0,
+        //         focusPath: [],
+        //         focusOffset: 0
+        //     });
+        // });
     });
 });

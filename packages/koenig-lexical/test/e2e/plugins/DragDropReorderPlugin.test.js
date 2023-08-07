@@ -6,11 +6,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe('Drag Drop Reorder Plugin', async function () {
-    test.beforeEach(async function ({page}) {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
-    test('can drag and drop a card between two other nodes', async function ({page}) {
+    test.afterAll(async () => {
+        await page.close();
+    });
+
+    test('can drag and drop a card between two other nodes', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
 
         await focusEditor(page);
@@ -58,7 +68,7 @@ test.describe('Drag Drop Reorder Plugin', async function () {
         `, {ignoreCardContents: true});
     });
 
-    test('can drag and drop a card at the top of the editor', async function ({page}) {
+    test('can drag and drop a card at the top of the editor', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
 
         await focusEditor(page);
@@ -108,7 +118,7 @@ test.describe('Drag Drop Reorder Plugin', async function () {
         `, {ignoreCardContents: true});
     });
 
-    test('can drag and drop a card at the bottom of the editor', async function ({page}) {
+    test('can drag and drop a card at the bottom of the editor', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
 
         await focusEditor(page);
@@ -163,7 +173,7 @@ test.describe('Drag Drop Reorder Plugin', async function () {
         `, {ignoreCardContents: true});
     });
 
-    test('can display placeholder element while hovering between nodes', async function ({page}) {
+    test('can display placeholder element while hovering between nodes', async function () {
         const filePath = path.relative(process.cwd(), __dirname + '/../fixtures/large-image.png');
 
         await focusEditor(page);

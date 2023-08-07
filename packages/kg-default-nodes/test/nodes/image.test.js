@@ -64,50 +64,50 @@ describe('ImageNode', function () {
         it('has getters for all properties', editorTest(function () {
             const imageNode = $createImageNode(dataset);
 
-            imageNode.getSrc().should.equal('/content/images/2022/11/koenig-lexical.jpg');
-            imageNode.getImgWidth().should.equal(3840);
-            imageNode.getImgHeight().should.equal(2160);
-            imageNode.getTitle().should.equal('This is a title');
-            imageNode.getAlt().should.equal('This is some alt text');
-            imageNode.getCaption().should.equal('This is a <b>caption</b>');
-            imageNode.getCardWidth().should.equal('regular');
-            imageNode.getHref().should.equal('');
+            imageNode.src.should.equal('/content/images/2022/11/koenig-lexical.jpg');
+            imageNode.width.should.equal(3840);
+            imageNode.height.should.equal(2160);
+            imageNode.title.should.equal('This is a title');
+            imageNode.alt.should.equal('This is some alt text');
+            imageNode.caption.should.equal('This is a <b>caption</b>');
+            imageNode.cardWidth.should.equal('regular');
+            imageNode.href.should.equal('');
         }));
 
         it('has setters for all properties', editorTest(function () {
             const imageNode = $createImageNode();
 
-            imageNode.getSrc().should.equal('');
-            imageNode.setSrc('/content/images/2022/11/koenig-lexical.jpg');
-            imageNode.getSrc().should.equal('/content/images/2022/11/koenig-lexical.jpg');
+            imageNode.src.should.equal('');
+            imageNode.src = '/content/images/2022/11/koenig-lexical.jpg';
+            imageNode.src.should.equal('/content/images/2022/11/koenig-lexical.jpg');
 
-            should(imageNode.getImgWidth()).equal(null);
-            imageNode.setImgWidth(3840);
-            imageNode.getImgWidth().should.equal(3840);
+            should(imageNode.width).equal(null);
+            imageNode.width = 3840;
+            imageNode.width.should.equal(3840);
 
-            should(imageNode.getImgHeight()).equal(null);
-            imageNode.setImgHeight(2160);
-            imageNode.getImgHeight().should.equal(2160);
+            should(imageNode.height).equal(null);
+            imageNode.height = 2160;
+            imageNode.height.should.equal(2160);
 
-            imageNode.getTitle().should.equal('');
-            imageNode.setTitle('I am a title');
-            imageNode.getTitle().should.equal('I am a title');
+            imageNode.title.should.equal('');
+            imageNode.title = 'I am a title';
+            imageNode.title.should.equal('I am a title');
 
-            imageNode.getAlt().should.equal('');
-            imageNode.setAlt('I am alt text');
-            imageNode.getAlt().should.equal('I am alt text');
+            imageNode.alt.should.equal('');
+            imageNode.alt = 'I am alt text';
+            imageNode.alt.should.equal('I am alt text');
 
-            imageNode.getCaption().should.equal('');
-            imageNode.setCaption('I am a <b>Caption</b>');
-            imageNode.getCaption().should.equal('I am a <b>Caption</b>');
+            imageNode.caption.should.equal('');
+            imageNode.caption = 'I am a <b>Caption</b>';
+            imageNode.caption.should.equal('I am a <b>Caption</b>');
 
-            imageNode.getCardWidth().should.equal('regular');
-            imageNode.setCardWidth('wide');
-            imageNode.getCardWidth().should.equal('wide');
+            imageNode.cardWidth.should.equal('regular');
+            imageNode.cardWidth = 'wide';
+            imageNode.cardWidth.should.equal('wide');
 
-            imageNode.getHref().should.equal('');
-            imageNode.setHref('https://example.com');
-            imageNode.getHref().should.equal('https://example.com');
+            imageNode.href.should.equal('');
+            imageNode.href = 'https://example.com';
+            imageNode.href.should.equal('https://example.com');
         }));
 
         it('has getDataset() convenience method', editorTest(function () {
@@ -127,9 +127,10 @@ describe('ImageNode', function () {
             const {element} = imageNode.exportDOM(exportOptions);
 
             element.outerHTML.should.prettifyTo(html`
-                <figure class="kg-card kg-image-card">
+                <figure class="kg-card kg-image-card kg-card-hascaption">
                     <img
                         src="/content/images/2022/11/koenig-lexical.jpg"
+                        class="kg-image"
                         alt="This is some alt text"
                         loading="lazy"
                         title="This is a title"
@@ -150,10 +151,11 @@ describe('ImageNode', function () {
             const {element} = imageNode.exportDOM(exportOptions);
 
             element.outerHTML.should.prettifyTo(html`
-                <figure class="kg-card kg-image-card">
+                <figure class="kg-card kg-image-card kg-card-hascaption">
                     <a href="https://example.com"
                         ><img
                         src="/content/images/2022/11/koenig-lexical.jpg"
+                        class="kg-image"
                         alt="This is some alt text"
                         loading="lazy"
                         title="This is a title"
@@ -178,17 +180,16 @@ describe('ImageNode', function () {
 
             element.outerHTML.should.prettifyTo(html`
                 <figure class="kg-card kg-image-card">
-                    <img src="/image.png" alt="" loading="lazy">
+                    <img src="/image.png" class="kg-image" alt="" loading="lazy">
                 </figure>
             `);
         }));
 
-        it('renders nothing with a missing src', editorTest(function () {
+        it('renders an empty span with a missing src', editorTest(function () {
             const imageNode = $createImageNode();
             const {element} = imageNode.exportDOM(exportOptions);
 
-            element.textContent.should.equal('');
-            should(element.outerHTML).be.undefined();
+            element.outerHTML.should.equal('<span></span>');
         }));
 
         it('renders a wide image', editorTest(function () {
@@ -320,11 +321,11 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getSrc().should.equal('/image.png');
-            nodes[0].getAlt().should.equal('Alt text');
-            nodes[0].getTitle().should.equal('Title text');
-            nodes[0].getImgWidth().should.equal(3000);
-            nodes[0].getImgHeight().should.equal(2000);
+            nodes[0].src.should.equal('/image.png');
+            nodes[0].alt.should.equal('Alt text');
+            nodes[0].title.should.equal('Title text');
+            nodes[0].width.should.equal(3000);
+            nodes[0].height.should.equal(2000);
         }));
 
         it('parses IMG inside FIGURE to image card without caption', editorTest(function () {
@@ -336,9 +337,9 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getSrc().should.equal('http://example.com/test.png');
-            nodes[0].getAlt().should.equal('Alt test');
-            nodes[0].getTitle().should.equal('Title test');
+            nodes[0].src.should.equal('http://example.com/test.png');
+            nodes[0].alt.should.equal('Alt test');
+            nodes[0].title.should.equal('Title test');
         }));
 
         it('parses IMG inside FIGURE to image card with caption', editorTest(function () {
@@ -351,8 +352,8 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getSrc().should.equal('http://example.com/test.png');
-            nodes[0].getCaption().should.equal('<strong>Caption test</strong>');
+            nodes[0].src.should.equal('http://example.com/test.png');
+            nodes[0].caption.should.equal('<strong>Caption test</strong>');
         }));
 
         it('extracts Koenig card widths', editorTest(function () {
@@ -363,7 +364,7 @@ describe('ImageNode', function () {
             `)).window.document;
             const nodes = $generateNodesFromDOM(editor, dom);
             nodes.length.should.equal(1);
-            nodes[0].getCardWidth().should.equal('wide');
+            nodes[0].cardWidth.should.equal('wide');
         }));
 
         it('extracts Medium card widths', editorTest(function () {
@@ -375,7 +376,7 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getCardWidth().should.equal('full');
+            nodes[0].cardWidth.should.equal('full');
         }));
 
         it('extracts IMG dimensions from width/height attrs', editorTest(function () {
@@ -387,9 +388,9 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getSrc().should.equal('http://example.com/test.png');
-            nodes[0].getImgWidth().should.equal(640);
-            nodes[0].getImgHeight().should.equal(480);
+            nodes[0].src.should.equal('http://example.com/test.png');
+            nodes[0].width.should.equal(640);
+            nodes[0].height.should.equal(480);
         }));
 
         it('extracts IMG dimensions from dataset', editorTest(function () {
@@ -401,9 +402,9 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getSrc().should.equal('http://example.com/test.png');
-            nodes[0].getImgWidth().should.equal(640);
-            nodes[0].getImgHeight().should.equal(480);
+            nodes[0].src.should.equal('http://example.com/test.png');
+            nodes[0].width.should.equal(640);
+            nodes[0].height.should.equal(480);
         }));
 
         it('extracts IMG dimensions from data-image-dimensions', editorTest(function () {
@@ -415,9 +416,9 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getSrc().should.equal('http://example.com/test.png');
-            nodes[0].getImgWidth().should.equal(640);
-            nodes[0].getImgHeight().should.equal(480);
+            nodes[0].src.should.equal('http://example.com/test.png');
+            nodes[0].width.should.equal(640);
+            nodes[0].height.should.equal(480);
         }));
 
         it('extracts href when img wrapped in anchor tag', editorTest(function () {
@@ -431,8 +432,8 @@ describe('ImageNode', function () {
             const nodes = $generateNodesFromDOM(editor, dom);
 
             nodes.length.should.equal(1);
-            nodes[0].getSrc().should.equal('http://example.com/test.png');
-            nodes[0].getHref().should.equal('https://example.com/link');
+            nodes[0].src.should.equal('http://example.com/test.png');
+            nodes[0].href.should.equal('https://example.com/link');
         }));
     });
 
@@ -482,13 +483,13 @@ describe('ImageNode', function () {
                 try {
                     const [imageNode] = $getRoot().getChildren();
 
-                    imageNode.getSrc().should.equal('/content/images/2022/11/koenig-lexical.jpg');
-                    imageNode.getImgWidth().should.equal(3840);
-                    imageNode.getImgHeight().should.equal(2160);
-                    imageNode.getTitle().should.equal('This is a title');
-                    imageNode.getAlt().should.equal('This is some alt text');
-                    imageNode.getCaption().should.equal('This is a <b>caption</b>');
-                    imageNode.getCardWidth().should.equal('wide');
+                    imageNode.src.should.equal('/content/images/2022/11/koenig-lexical.jpg');
+                    imageNode.width.should.equal(3840);
+                    imageNode.height.should.equal(2160);
+                    imageNode.title.should.equal('This is a title');
+                    imageNode.alt.should.equal('This is some alt text');
+                    imageNode.caption.should.equal('This is a <b>caption</b>');
+                    imageNode.cardWidth.should.equal('wide');
 
                     done();
                 } catch (e) {
@@ -496,5 +497,15 @@ describe('ImageNode', function () {
                 }
             });
         });
+    });
+
+    describe('getTextContent', function () {
+        it('returns contents', editorTest(function () {
+            const node = $createImageNode();
+            node.getTextContent().should.equal('');
+
+            node.caption = 'Test caption';
+            node.getTextContent().should.equal('Test caption\n\n');
+        }));
     });
 });

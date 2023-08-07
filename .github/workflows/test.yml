@@ -11,7 +11,7 @@ jobs:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && !startsWith(github.head_ref, 'renovate/'))
     strategy:
       matrix:
-        node: ['16.13.0', '18.12.1' ]
+        node: ['16.14.0', '18.12.1' ]
     env:
       FORCE_COLOR: 1
       # https://github.com/vitejs/vite/issues/2433
@@ -39,19 +39,27 @@ jobs:
           sudo sh -c "echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true | sudo debconf-set-selections"
           sudo apt-get install msttcorefonts -qq
 
-      - name: "Check if repository is a Lerna monorepo"
-        id: check_files
-        uses: andstor/file-existence-action@20b4d2e596410855db8f9ca21e96fbe18e12930b
-        with:
-          files: "lerna.json"
-
-      - run: yarn global add lerna@^4
-        if: steps.check_files.outputs.files_exists == 'true'
-
       - run: yarn
 
+      - name: Get installed Playwright version
+        id: playwright-version
+        run: echo "PLAYWRIGHT_VERSION=$(grep -A1 '^"@playwright/test@' yarn.lock | awk -F'"' '/version/ {print $2}')" >> $GITHUB_ENV
+
+      - name: Cache playwright binaries
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+
       - name: Install Playwright
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
+
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps
 
       - run: yarn test
       - uses: codecov/codecov-action@v3
@@ -64,7 +72,7 @@ jobs:
           path: playwright-report
           retention-days: 30
 
-      - uses: daniellockyer/action-slack-build@master
+      - uses: tryghost/actions/actions/slack-build@main
         if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           status: ${{ job.status }}

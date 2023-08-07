@@ -42,7 +42,7 @@ const KoenigCardWrapper = ({nodeKey, width, wrapperStyle, IndicatorIcon, childre
                         const clickedDifferentEditor = !cardNode;
 
                         if (isSelected && (cardNode?.hasEditMode?.() && !isEditing)) {
-                            editor.dispatchCommand(EDIT_CARD_COMMAND, {cardKey: nodeKey});
+                            editor.dispatchCommand(EDIT_CARD_COMMAND, {cardKey: nodeKey, focusEditor: !clickedDifferentEditor});
                         } else if (!isSelected) {
                             editor.dispatchCommand(SELECT_CARD_COMMAND, {cardKey: nodeKey, focusEditor: !clickedDifferentEditor});
                         }
@@ -61,6 +61,19 @@ const KoenigCardWrapper = ({nodeKey, width, wrapperStyle, IndicatorIcon, childre
             )
         );
     });
+
+    React.useEffect(() => {
+        // add a property to the parent element that's added directly by Lexical
+        // so we can target it via CSS for things like spacing between stacked full-width cards
+        if (containerRef.current?.parentElement) {
+            // avoid setting property when 'regular' so there's less test churn
+            if (cardWidth === 'regular') {
+                delete containerRef.current.parentElement.dataset.kgCardWidth;
+            } else {
+                containerRef.current.parentElement.dataset.kgCardWidth = cardWidth;
+            }
+        }
+    }, [cardWidth, containerRef]);
 
     const setEditing = (shouldEdit) => {
         // convert nodeKey to int

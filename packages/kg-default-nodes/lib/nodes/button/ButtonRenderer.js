@@ -1,8 +1,12 @@
-export function renderButtonNodeToDOM(node, options = {}) {
+import {addCreateDocumentOption} from '../../utils/add-create-document-option';
+import {renderEmptyContainer} from '../../utils/render-empty-container';
+
+export function renderButtonNode(node, options = {}) {
+    addCreateDocumentOption(options);
     const document = options.createDocument();
 
-    if (!node.getButtonUrl() || node.getButtonUrl().trim() === '') {
-        return document.createTextNode('');
+    if (!node.buttonUrl || node.buttonUrl.trim() === '') {
+        return renderEmptyContainer(document);
     }
 
     if (options.target === 'email') {
@@ -19,48 +23,48 @@ function frontendTemplate(node, document) {
     cardDiv.setAttribute('class', cardClasses);
 
     const button = document.createElement('a');
-    button.setAttribute('href', node.getButtonUrl());
+    button.setAttribute('href', node.buttonUrl);
     button.setAttribute('class', 'kg-btn kg-btn-accent');
-    button.textContent = node.getButtonText() || 'Button Title';
+    button.textContent = node.buttonText || 'Button Title';
 
     cardDiv.appendChild(button);
-    return cardDiv;
+    return {element: cardDiv};
 }
 
 function emailTemplate(node, document) {
     const parent = document.createElement('p');
-    
+
     const buttonDiv = document.createElement('div');
     buttonDiv.setAttribute('class', 'btn btn-accent');
     parent.appendChild(buttonDiv);
-    
+
     const table = document.createElement('table');
     table.setAttribute('border', 0);
     table.setAttribute('cellspacing', 0);
     table.setAttribute('cellpadding', 0);
-    table.setAttribute('alignment',node.getAlignment());
+    table.setAttribute('align', node.alignment);
     buttonDiv.appendChild(table);
-    
+
     const row = document.createElement('tr');
     table.appendChild(row);
-    
+
     const cell = document.createElement('td');
     cell.setAttribute('align', 'center');
     row.appendChild(cell);
-    
+
     const button = document.createElement('a');
-    button.setAttribute('href', node.getButtonUrl());
-    button.textContent = node.getButtonText();
+    button.setAttribute('href', node.buttonUrl);
+    button.textContent = node.buttonText;
     cell.appendChild(button);
 
-    return parent;
+    return {element: parent};
 }
 
 function getCardClasses(node) {
     let cardClasses = ['kg-card kg-button-card'];
 
-    if (node.getAlignment()) {
-        cardClasses.push(`kg-align-${node.getAlignment()}`);
+    if (node.alignment) {
+        cardClasses.push(`kg-align-${node.alignment}`);
     }
 
     return cardClasses.join(' ');

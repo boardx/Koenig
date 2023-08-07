@@ -21,14 +21,15 @@ export const audioUploadHandler = async (files, nodeKey, editor, upload) => {
 
     // read file into an object URL so we can grab extra metadata
     const objectURL = URL.createObjectURL(files[0]);
-    const {duration, mimeType} = await getAudioMetadata(objectURL);
+    const mimeType = files[0].type;
+    const {duration} = await getAudioMetadata(objectURL);
 
     await editor.update(() => {
         const node = $getNodeByKey(nodeKey);
-        node.setDuration(duration);
-        node.setSrc(fileSrc);
-        node.setMimeType(mimeType);
-        node.setTitle(title);
+        node.duration = duration;
+        node.src = fileSrc;
+        node.mimeType = mimeType;
+        node.title = title;
     });
 
     return;

@@ -45,11 +45,21 @@ const EMPHASIS_TRANSFORMS = [{
 }];
 
 test.describe('Markdown', async () => {
-    test.beforeEach(async ({page}) => {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
-    test('converts markdown img to html', async function ({page}) {
+    test.afterAll(async () => {
+        await page.close();
+    });
+
+    test('converts markdown img to html', async function () {
         await focusEditor(page);
         await pasteText(page, '![Image](https://octodex.github.com/images/minion.png)');
 
@@ -57,14 +67,14 @@ test.describe('Markdown', async () => {
         await expect(await page.locator('img')).toHaveAttribute('src', 'https://octodex.github.com/images/minion.png');
     });
 
-    test('converts markdown link to html', async function ({page}) {
+    test('converts markdown link to html', async function () {
         await focusEditor(page);
         await pasteText(page, '[link](https://ghost.org/)');
 
         await expect(await page.locator('a[href="https://ghost.org/"]')).toBeVisible();
     });
 
-    test('converts to code card', async function ({page}) {
+    test('converts to code card', async function () {
         await focusEditor(page);
         await pasteText(page, `
         // Some comments
@@ -76,7 +86,7 @@ test.describe('Markdown', async () => {
         await expect(await page.locator('[data-kg-card="codeblock"]')).toBeVisible();
     });
 
-    test('converts --- to hr', async function ({page}) {
+    test('converts --- to hr', async function () {
         await focusEditor(page);
         await pasteText(page, '---');
 
@@ -85,7 +95,7 @@ test.describe('Markdown', async () => {
 
     test.describe('converts ## to headlines', async function () {
         HEADLINE_TRANSFORMS.forEach((testCase) => {
-            test(`${testCase.text} -> heading`, async function ({page}) {
+            test(`${testCase.text} -> heading`, async function () {
                 await focusEditor(page);
                 await pasteText(page, testCase.text);
                 await assertHTML(page, testCase.html);
@@ -95,7 +105,7 @@ test.describe('Markdown', async () => {
 
     test.describe('converts emphasis to html', async function () {
         EMPHASIS_TRANSFORMS.forEach((testCase) => {
-            test(`${testCase.text}`, async function ({page}) {
+            test(`${testCase.text}`, async function () {
                 await focusEditor(page);
                 await pasteText(page, testCase.text);
                 await assertHTML(page, testCase.html);
@@ -103,7 +113,7 @@ test.describe('Markdown', async () => {
         });
     });
 
-    test('does not convert markdown to html if pasting with shift', async function ({page}) {
+    test('does not convert markdown to html if pasting with shift', async function () {
         await focusEditor(page);
         await page.keyboard.down('Shift');
         await pasteText(page, `
@@ -121,7 +131,7 @@ test.describe('Markdown', async () => {
         await expect(await page.locator('[data-kg-card="horizontalrule"]')).toHaveCount(0);
     });
 
-    test('converts table to html card', async function ({page}) {
+    test('converts table to html card', async function () {
         await focusEditor(page);
         await pasteText(page, '<table><tr><th>Month</th><th>Savings</th></tr><tr><td>January</td><td>$100</td></tr><tr><td>February</td><td>$80</td></tr></table>');
 

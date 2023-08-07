@@ -1,22 +1,21 @@
 import React from 'react';
 import cleanBasicHtml from '@tryghost/kg-clean-basic-html';
-import generateEditorState from '../utils/generateEditorState';
 import {$generateHtmlFromNodes} from '@lexical/html';
 import {BASIC_NODES, KoenigCardWrapper, MINIMAL_NODES} from '../index.js';
-import {ProductNode as BaseProductNode, INSERT_PRODUCT_COMMAND} from '@tryghost/kg-default-nodes';
+import {ProductNode as BaseProductNode} from '@tryghost/kg-default-nodes';
 import {ReactComponent as ProductCardIcon} from '../assets/icons/kg-card-type-product.svg';
 import {ProductNodeComponent} from './ProductNodeComponent';
-import {createEditor} from 'lexical';
+import {createCommand} from 'lexical';
 import {isEditorEmpty} from '../utils/isEditorEmpty';
+import {populateNestedEditor, setupNestedEditor} from '../utils/nested-editors.js';
 
 // re-export here, so we don't need to import from multiple places throughout the app
-export {INSERT_PRODUCT_COMMAND} from '@tryghost/kg-default-nodes';
-
+export const INSERT_PRODUCT_COMMAND = createCommand();
 export class ProductNode extends BaseProductNode {
-    __titleEditor;
-    __titleEditorInitialState;
-    __descriptionEditor;
-    __descriptionEditorInitialState;
+    __productTitleEditor;
+    __productTitleEditorInitialState;
+    __productDescriptionEditor;
+    __productDescriptionEditorInitialState;
 
     static kgMenu = [{
         label: 'Product',
@@ -34,25 +33,16 @@ export class ProductNode extends BaseProductNode {
     constructor(dataset = {}, key) {
         super(dataset, key);
 
-        // set up and populate nested editors from the serialized HTML
-        this.__titleEditor = dataset.titleEditor || createEditor({nodes: MINIMAL_NODES});
-        this.__titleEditorInitialState = dataset.titleEditorInitialState;
-        if (!this.__titleEditorInitialState) {
-            // wrap the header in a paragraph so it gets parsed correctly
-            // - we serialize with no wrapper so the renderer can decide how to wrap it
-            const initialHtml = dataset.productTitle ? `<p>${dataset.productTitle}</p>` : null;
-            this.__titleEditorInitialState = generateEditorState({
-                editor: createEditor({nodes: MINIMAL_NODES}),
-                initialHtml
-            });
+        // set up nested editor instances
+        setupNestedEditor(this, '__productTitleEditor', {editor: dataset.productTitleEditor, nodes: MINIMAL_NODES});
+        setupNestedEditor(this, '__productDescriptionEditor', {editor: dataset.productDescriptionEditor, nodes: BASIC_NODES});
+
+        // populate nested editors on initial construction
+        if (!dataset.productTitleEditor && dataset.productTitle) {
+            populateNestedEditor(this, '__productTitleEditor', `<p>${dataset.productTitle}</p>`); // we serialize with no wrapper
         }
-        this.__descriptionEditor = dataset.descriptionEditor || createEditor({nodes: BASIC_NODES});
-        this.__descriptionEditorInitialState = dataset.descriptionEditorInitialState;
-        if (!this.__descriptionEditorInitialState) {
-            this.__descriptionEditorInitialState = generateEditorState({
-                editor: createEditor({nodes: BASIC_NODES}),
-                initialHtml: dataset.productDescription
-            });
+        if (!dataset.productDescriptionEditor) {
+            populateNestedEditor(this, '__productDescriptionEditor', dataset.productDescription);
         }
     }
 
@@ -61,10 +51,10 @@ export class ProductNode extends BaseProductNode {
 
         // client-side only data properties such as nested editors
         const self = this.getLatest();
-        dataset.titleEditor = self.__titleEditor;
-        dataset.titleEditorInitialState = self.__titleEditorInitialState;
-        dataset.descriptionEditor = self.__descriptionEditor;
-        dataset.descriptionEditorInitialState = self.__descriptionEditorInitialState;
+        dataset.productTitleEditor = self.__productTitleEditor;
+        dataset.productTitleEditorInitialState = self.__productTitleEditorInitialState;
+        dataset.productDescriptionEditor = self.__productDescriptionEditor;
+        dataset.productDescriptionEditorInitialState = self.__productDescriptionEditorInitialState;
 
         return dataset;
     }
@@ -74,16 +64,16 @@ export class ProductNode extends BaseProductNode {
 
         // convert nested editor instances back into HTML because their content may not
         // be automatically updated when the nested editor changes
-        if (this.__titleEditor) {
-            this.__titleEditor.getEditorState().read(() => {
-                const html = $generateHtmlFromNodes(this.__titleEditor, null);
+        if (this.__productTitleEditor) {
+            this.__productTitleEditor.getEditorState().read(() => {
+                const html = $generateHtmlFromNodes(this.__productTitleEditor, null);
                 const cleanedHtml = cleanBasicHtml(html, {firstChildInnerContent: true});
                 json.productTitle = cleanedHtml;
             });
         }
-        if (this.__descriptionEditor) {
-            this.__descriptionEditor.getEditorState().read(() => {
-                const html = $generateHtmlFromNodes(this.__descriptionEditor, null);
+        if (this.__productDescriptionEditor) {
+            this.__productDescriptionEditor.getEditorState().read(() => {
+                const html = $generateHtmlFromNodes(this.__productDescriptionEditor, null);
                 const cleanedHtml = cleanBasicHtml(html);
                 json.productDescription = cleanedHtml;
             });
@@ -96,21 +86,21 @@ export class ProductNode extends BaseProductNode {
         return (
             <KoenigCardWrapper nodeKey={this.getKey()}>
                 <ProductNodeComponent
-                    buttonText={this.getProductButton()}
-                    buttonUrl={this.getProductUrl()}
-                    description={this.getProductDescription()}
-                    descriptionEditor={this.__descriptionEditor}
-                    descriptionEditorInitialState={this.__descriptionEditorInitialState}
-                    imgHeight={this.getProductImageHeight()}
-                    imgSrc={this.getProductImageSrc()}
-                    imgWidth={this.getProductImageWidth()}
-                    isButtonEnabled={this.getProductButtonEnabled()}
-                    isRatingEnabled={this.getProductRatingEnabled()}
+                    buttonText={this.productButton}
+                    buttonUrl={this.productUrl}
+                    description={this.productDescription}
+                    descriptionEditor={this.__productDescriptionEditor}
+                    descriptionEditorInitialState={this.__productDescriptionEditorInitialState}
+                    imgHeight={this.productImageHeight}
+                    imgSrc={this.productImageSrc}
+                    imgWidth={this.productImageWidth}
+                    isButtonEnabled={this.productButtonEnabled}
+                    isRatingEnabled={this.productRatingEnabled}
                     nodeKey={this.getKey()}
-                    starRating={this.getProductStarRating()}
-                    title={this.getProductTitle()}
-                    titleEditor={this.__titleEditor}
-                    titleEditorInitialState={this.__titleEditorInitialState}
+                    starRating={this.productStarRating}
+                    title={this.productTitle}
+                    titleEditor={this.__productTitleEditor}
+                    titleEditorInitialState={this.__productTitleEditorInitialState}
                 />
             </KoenigCardWrapper>
         );
@@ -119,11 +109,11 @@ export class ProductNode extends BaseProductNode {
     // override the default `isEmpty` check because we need to check the nested editors
     // rather than the data properties themselves
     isEmpty() {
-        const isTitleEmpty = isEditorEmpty(this.__titleEditor);
-        const isDescriptionEmpty = isEditorEmpty(this.__descriptionEditor);
-        const isButtonFilled = this.getProductButtonEnabled() && this.getProductUrl() && this.getProductButton();
+        const isTitleEmpty = isEditorEmpty(this.__productTitleEditor);
+        const isDescriptionEmpty = isEditorEmpty(this.__productDescriptionEditor);
+        const isButtonFilled = this.productButtonEnabled && this.productUrl && this.productButton;
 
-        return isTitleEmpty && isDescriptionEmpty && !isButtonFilled && !this.getProductImageSrc() && !this.getProductRatingEnabled();
+        return isTitleEmpty && isDescriptionEmpty && !isButtonFilled && !this.productImageSrc && !this.productRatingEnabled;
     }
 }
 

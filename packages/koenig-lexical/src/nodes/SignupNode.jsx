@@ -1,18 +1,16 @@
-import BASIC_NODES from './BasicNodes';
 import KoenigCardWrapper from '../components/KoenigCardWrapper';
 import MINIMAL_NODES from './MinimalNodes';
 import React from 'react';
 import SignupNodeComponent from './SignupNodeComponent';
 import cleanBasicHtml from '@tryghost/kg-clean-basic-html';
-import generateEditorState from '../utils/generateEditorState';
 import {$canShowPlaceholderCurry} from '@lexical/text';
 import {$generateHtmlFromNodes} from '@lexical/html';
-import {SignupNode as BaseSignupNode, INSERT_SIGNUP_COMMAND} from '@tryghost/kg-default-nodes';
-import {createEditor} from 'lexical';
-
+import {SignupNode as BaseSignupNode} from '@tryghost/kg-default-nodes';
 import {ReactComponent as SignupCardIcon} from '../assets/icons/kg-card-type-signup.svg';
+import {createCommand} from 'lexical';
+import {populateNestedEditor, setupNestedEditor} from '../utils/nested-editors';
 
-export {INSERT_SIGNUP_COMMAND} from '@tryghost/kg-default-nodes';
+export const {INSERT_SIGNUP_COMMAND} = createCommand();
 
 export class SignupNode extends BaseSignupNode {
     __disclaimerTextEditor;
@@ -28,7 +26,15 @@ export class SignupNode extends BaseSignupNode {
         Icon: SignupCardIcon,
         insertCommand: INSERT_SIGNUP_COMMAND,
         matches: ['signup', 'subscribe'],
-        isHidden: ({config}) => !config?.feature?.signupCard
+        isHidden: ({config}) => {
+            const isMembersEnabled = config?.membersEnabled;
+            return !(isMembersEnabled);
+        },
+        insertParams: ({config}) => ({
+            header: config?.siteTitle ? `Sign up for ${config.siteTitle}` : '',
+            subheader: config?.siteDescription || '',
+            disclaimer: 'No spam. Unsubscribe anytime.'
+        })
     };
 
     getIcon() {
@@ -38,34 +44,23 @@ export class SignupNode extends BaseSignupNode {
     constructor(dataset = {}, key) {
         super(dataset, key);
 
-        this.__disclaimerTextEditor = dataset.disclaimerTextEditor || createEditor({nodes: BASIC_NODES});
-        this.__disclaimerTextEditorInitialState = dataset.disclaimerTextEditorInitialState;
-        if (!this.__disclaimerTextEditorInitialState) {
-            const initialHtml = dataset.disclaimer ? `<p>${dataset.disclaimer}</p>` : null;
-            this.__disclaimerTextEditorInitialState = generateEditorState({
-                editor: createEditor({nodes: MINIMAL_NODES}),
-                initialHtml
-            });
+        setupNestedEditor(this, '__headerTextEditor', {editor: dataset.headerTextEditor, nodes: MINIMAL_NODES});
+        setupNestedEditor(this, '__subheaderTextEditor', {editor: dataset.subheaderTextEditor, nodes: MINIMAL_NODES});
+        setupNestedEditor(this, '__disclaimerTextEditor', {editor: dataset.disclaimerTextEditor, nodes: MINIMAL_NODES});
+
+        // populate nested editors on initial construction
+        if (!dataset.headerTextEditor && dataset.header) {
+            populateNestedEditor(this, '__headerTextEditor', `<p>${dataset.header}</p>`);
         }
 
-        this.__headerTextEditor = dataset.headerTextEditor || createEditor({nodes: MINIMAL_NODES});
-        this.__headerTextEditorInitialState = dataset.headerTextEditorInitialState;
-        if (!this.__headerTextEditorInitialState) {
-            const initialHtml = dataset.header ? `<p>${dataset.header}</p>` : null;
-            this.__headerTextEditorInitialState = generateEditorState({
-                editor: createEditor({nodes: MINIMAL_NODES}),
-                initialHtml
-            });
+        // populate nested editors on initial construction
+        if (!dataset.subheaderTextEditor && dataset.subheader) {
+            populateNestedEditor(this, '__subheaderTextEditor', `<p>${dataset.subheader}</p>`);
         }
 
-        this.__subheaderTextEditor = dataset.subheaderTextEditor || createEditor({nodes: MINIMAL_NODES});
-        this.__subheaderTextEditorInitialState = dataset.subheaderTextEditorInitialState;
-        if (!this.__subheaderTextEditorInitialState) {
-            const initialHtml = dataset.subheader ? `<p>${dataset.subheader}</p>` : null;
-            this.__subheaderTextEditorInitialState = generateEditorState({
-                editor: createEditor({nodes: MINIMAL_NODES}),
-                initialHtml
-            });
+        // populate nested editors on initial construction
+        if (!dataset.disclaimerTextEditor && dataset.disclaimer) {
+            populateNestedEditor(this, '__disclaimerTextEditor', `<p>${dataset.disclaimer}</p>`);
         }
     }
 
@@ -75,7 +70,7 @@ export class SignupNode extends BaseSignupNode {
         if (this.__disclaimerTextEditor) {
             this.__disclaimerTextEditor.getEditorState().read(() => {
                 const html = $generateHtmlFromNodes(this.__disclaimerTextEditor, null);
-                const cleanedHtml = cleanBasicHtml(html, {firstChildInnerContent: true});
+                const cleanedHtml = cleanBasicHtml(html, {firstChildInnerContent: true, allowBr: true});
                 json.disclaimer = cleanedHtml;
             });
         }
@@ -83,7 +78,7 @@ export class SignupNode extends BaseSignupNode {
         if (this.__headerTextEditor) {
             this.__headerTextEditor.getEditorState().read(() => {
                 const html = $generateHtmlFromNodes(this.__headerTextEditor, null);
-                const cleanedHtml = cleanBasicHtml(html, {firstChildInnerContent: true});
+                const cleanedHtml = cleanBasicHtml(html, {firstChildInnerContent: true, allowBr: true});
                 json.header = cleanedHtml;
             });
         }
@@ -91,7 +86,7 @@ export class SignupNode extends BaseSignupNode {
         if (this.__subheaderTextEditor) {
             this.__subheaderTextEditor.getEditorState().read(() => {
                 const html = $generateHtmlFromNodes(this.__subheaderTextEditor, null);
-                const cleanedHtml = cleanBasicHtml(html, {firstChildInnerContent: true});
+                const cleanedHtml = cleanBasicHtml(html, {firstChildInnerContent: true, allowBr: true});
                 json.subheader = cleanedHtml;
             });
         }
@@ -115,7 +110,7 @@ export class SignupNode extends BaseSignupNode {
     }
 
     getCardWidth() {
-        const layout = this.getLayout();
+        const layout = this.layout;
 
         return layout === 'split' ? 'full' : layout;
     }
@@ -124,25 +119,27 @@ export class SignupNode extends BaseSignupNode {
         return (
             <KoenigCardWrapper nodeKey={this.getKey()} width={this.getCardWidth()}>
                 <SignupNodeComponent
-                    alignment={this.getAlignment()}
-                    backgroundColor={this.getBackgroundColor()}
-                    backgroundImageSrc={this.getBackgroundImageSrc()}
-                    buttonColor={this.getButtonColor()}
-                    buttonText={this.getButtonText()}
-                    buttonTextColor={this.getButtonTextColor()}
-                    disclaimer={this.getDisclaimer()}
+                    alignment={this.alignment}
+                    backgroundColor={this.backgroundColor}
+                    backgroundImageSrc={this.backgroundImageSrc}
+                    backgroundSize={this.backgroundSize}
+                    buttonColor={this.buttonColor}
+                    buttonText={this.buttonText}
+                    buttonTextColor={this.buttonTextColor}
+                    disclaimer={this.disclaimer}
                     disclaimerTextEditor={this.__disclaimerTextEditor}
                     disclaimerTextEditorInitialState={this.__disclaimerTextEditorInitialState}
-                    header={this.getHeader()}
+                    header={this.header}
                     headerTextEditor={this.__headerTextEditor}
                     headerTextEditorInitialState={this.__headerTextEditorInitialState}
-                    labels={this.getLabels()}
-                    layout={this.getLayout()}
+                    isSwapped={this.swapped}
+                    labels={this.labels}
+                    layout={this.layout}
                     nodeKey={this.getKey()}
-                    subheader={this.getSubheader()}
+                    subheader={this.subheader}
                     subheaderTextEditor={this.__subheaderTextEditor}
                     subheaderTextEditorInitialState={this.__subheaderTextEditorInitialState}
-                    textColor={this.getTextColor()}
+                    textColor={this.textColor}
                 />
             </KoenigCardWrapper>
         );

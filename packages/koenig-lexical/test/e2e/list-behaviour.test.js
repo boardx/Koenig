@@ -2,12 +2,22 @@ import {assertHTML, assertSelection, focusEditor, html, initialize} from '../uti
 import {test} from '@playwright/test';
 
 test.describe('List behaviour', async () => {
-    test.beforeEach(async function ({page}) {
+    let page;
+
+    test.beforeAll(async ({browser}) => {
+        page = await browser.newPage();
+    });
+
+    test.beforeEach(async () => {
         await initialize({page});
     });
 
+    test.afterAll(async () => {
+        await page.close();
+    });
+
     test.describe('BACKSPACE', function () {
-        test('at beginning of populated list item after paragraph', async function ({page}) {
+        test('at beginning of populated list item after paragraph', async function () {
             await focusEditor(page);
             await page.keyboard.type('Paragraph');
             await page.keyboard.press('Enter');
@@ -68,9 +78,9 @@ test.describe('List behaviour', async () => {
             `);
         });
 
-        test('at beginning of populated list after card', async function ({page}) {
+        test('at beginning of populated list after card', async function () {
             await focusEditor(page);
-            await page.keyboard.type('--- ');
+            await page.keyboard.type('---');
             await page.keyboard.type('- first li');
             await page.keyboard.press('Enter');
             await page.keyboard.type('second li');
@@ -114,7 +124,7 @@ test.describe('List behaviour', async () => {
             `);
         });
 
-        test('at beginning of populated list-item mid list', async function ({page}) {
+        test('at beginning of populated list-item mid list', async function () {
             await focusEditor(page);
             await page.keyboard.type('- first li');
             await page.keyboard.press('Enter');
@@ -157,7 +167,7 @@ test.describe('List behaviour', async () => {
             });
         });
 
-        test('on empty list item after paragraph', async function ({page}) {
+        test('on empty list item after paragraph', async function () {
             await focusEditor(page);
             await page.keyboard.type('First paragraph');
             await page.keyboard.press('Enter');
@@ -187,7 +197,7 @@ test.describe('List behaviour', async () => {
             });
         });
 
-        test('on empty list item at end of list', async function ({page}) {
+        test('on empty list item at end of list', async function () {
             await focusEditor(page);
             await page.keyboard.type('- first li');
             await page.keyboard.press('Enter');
@@ -205,7 +215,7 @@ test.describe('List behaviour', async () => {
     });
 
     test.describe('Merging', function () {
-        test('merges two ULs after deleting a separating paragraph', async function ({page}) {
+        test('merges two ULs after deleting a separating paragraph', async function () {
             await focusEditor(page);
             await page.keyboard.type('- one');
             await page.keyboard.press('Enter');
@@ -223,7 +233,7 @@ test.describe('List behaviour', async () => {
             `);
         });
 
-        test('does not merge two lists of different types after deleting separating paragraph', async function ({page}) {
+        test('does not merge two lists of different types after deleting separating paragraph', async function () {
             await focusEditor(page);
             await page.keyboard.type('- ul one');
             await page.keyboard.press('Enter');

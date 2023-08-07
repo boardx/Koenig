@@ -1,18 +1,17 @@
 import React from 'react';
 import cleanBasicHtml from '@tryghost/kg-clean-basic-html';
-import generateEditorState from '../utils/generateEditorState';
 import {$generateHtmlFromNodes} from '@lexical/html';
-import {ImageNode as BaseImageNode, INSERT_IMAGE_COMMAND} from '@tryghost/kg-default-nodes';
+import {ImageNode as BaseImageNode} from '@tryghost/kg-default-nodes';
 import {ReactComponent as GIFIcon} from '../assets/icons/kg-card-type-gif.svg';
 import {ReactComponent as ImageCardIcon} from '../assets/icons/kg-card-type-image.svg';
 import {ImageNodeComponent} from './ImageNodeComponent';
 import {KoenigCardWrapper, MINIMAL_NODES} from '../index.js';
 import {OPEN_TENOR_SELECTOR_COMMAND, OPEN_UNSPLASH_SELECTOR_COMMAND} from '../plugins/KoenigSelectorPlugin.jsx';
 import {ReactComponent as UnsplashIcon} from '../assets/icons/kg-card-type-unsplash.svg';
-import {createEditor} from 'lexical';
+import {createCommand} from 'lexical';
+import {populateNestedEditor, setupNestedEditor} from '../utils/nested-editors';
 
-// re-export here so we don't need to import from multiple places throughout the app
-export {INSERT_IMAGE_COMMAND} from '@tryghost/kg-default-nodes';
+export const INSERT_IMAGE_COMMAND = createCommand();
 
 export class ImageNode extends BaseImageNode {
     // transient properties used to control node behaviour
@@ -64,7 +63,7 @@ export class ImageNode extends BaseImageNode {
     constructor(dataset = {}, key) {
         super(dataset, key);
 
-        const {previewSrc, triggerFileDialog, initialFile, selector, isImageHidden, caption} = dataset;
+        const {previewSrc, triggerFileDialog, initialFile, selector, isImageHidden} = dataset;
 
         this.__previewSrc = previewSrc || '';
         // don't trigger the file dialog when rendering if we've already been given a url
@@ -76,22 +75,11 @@ export class ImageNode extends BaseImageNode {
         this.__selector = selector;
         this.__isImageHidden = isImageHidden;
 
-        // set up and populate nested editors from the serialized HTML
-        this.__captionEditor = dataset.captionEditor || createEditor({nodes: MINIMAL_NODES});
-        this.__captionEditorInitialState = dataset.captionEditorInitialState;
+        setupNestedEditor(this, '__captionEditor', {editor: dataset.captionEditor, nodes: MINIMAL_NODES});
 
-        if (!this.__captionEditorInitialState) {
-            // wrap the caption in a paragraph so it gets parsed correctly
-            // - we serialize with no wrapper so the renderer can decide how to wrap it
-            const initialHtml = caption ? `<p>${caption}</p>` : null;
-
-            // store the initial state separately as it's passed in to `<CollaborationPlugin />`
-            // for use when there is no YJS document already stored
-            this.__captionEditorInitialState = generateEditorState({
-                // create a new editor instance so we don't pre-fill an editor that will be filled by YJS content
-                editor: createEditor({nodes: MINIMAL_NODES}),
-                initialHtml
-            });
+        // populate nested editors on initial construction
+        if (!dataset.captionEditor && dataset.caption) {
+            populateNestedEditor(this, '__captionEditor', `<p>${dataset.caption}</p>`); // we serialize with no wrapper
         }
     }
 
@@ -113,19 +101,19 @@ export class ImageNode extends BaseImageNode {
         return dataset;
     }
 
-    getPreviewSrc() {
+    get previewSrc() {
         const self = this.getLatest();
         return self.__previewSrc;
     }
 
-    setPreviewSrc(previewSrc) {
+    set previewSrc(previewSrc) {
         const writable = this.getWritable();
-        return writable.__previewSrc = previewSrc;
+        writable.__previewSrc = previewSrc;
     }
 
-    setTriggerFileDialog(shouldTrigger) {
+    set triggerFileDialog(shouldTrigger) {
         const writable = this.getWritable();
-        return writable.__triggerFileDialog = shouldTrigger;
+        writable.__triggerFileDialog = shouldTrigger;
     }
 
     createDOM() {
@@ -161,11 +149,11 @@ export class ImageNode extends BaseImageNode {
                             altText={this.__alt}
                             captionEditor={this.__captionEditor}
                             captionEditorInitialState={this.__captionEditorInitialState}
-                            href={this.__href}
+                            href={this.href}
                             initialFile={this.__initialFile}
                             nodeKey={this.getKey()}
-                            previewSrc={this.getPreviewSrc()}
-                            src={this.__src}
+                            previewSrc={this.previewSrc}
+                            src={this.src}
                             triggerFileDialog={this.__triggerFileDialog}
                         />
                     )

@@ -1,126 +1,19 @@
-import CardContext from '../context/CardContext';
 import KoenigCardWrapper from '../components/KoenigCardWrapper';
-import KoenigComposerContext from '../context/KoenigComposerContext.jsx';
 import MINIMAL_NODES from './MinimalNodes';
 import React from 'react';
 import cleanBasicHtml from '@tryghost/kg-clean-basic-html';
-import generateEditorState from '../utils/generateEditorState';
 import {$generateHtmlFromNodes} from '@lexical/html';
-import {$getNodeByKey, createEditor} from 'lexical';
-import {ActionToolbar} from '../components/ui/ActionToolbar.jsx';
-import {CalloutNode as BaseCalloutNode, INSERT_CALLOUT_COMMAND} from '@tryghost/kg-default-nodes';
-import {CalloutCard} from '../components/ui/cards/CalloutCard';
+import {CalloutNode as BaseCalloutNode} from '@tryghost/kg-default-nodes';
 import {ReactComponent as CalloutCardIcon} from '../assets/icons/kg-card-type-callout.svg';
-import {EDIT_CARD_COMMAND} from '../plugins/KoenigBehaviourPlugin';
-import {SnippetActionToolbar} from '../components/ui/SnippetActionToolbar.jsx';
-import {ToolbarMenu, ToolbarMenuItem, ToolbarMenuSeparator} from '../components/ui/ToolbarMenu.jsx';
-import {sanitizeHtml} from '../utils/sanitize-html';
-import {useLexicalComposerContext} from '@lexical/react/LexicalComposerContext';
+import {CalloutNodeComponent} from './CalloutNodeComponent';
+import {createCommand} from 'lexical';
+import {populateNestedEditor, setupNestedEditor} from '../utils/nested-editors';
 
-// re-export here so we don't need to import from multiple places throughout the app
-export {INSERT_CALLOUT_COMMAND} from '@tryghost/kg-default-nodes';
-
-function CalloutNodeComponent({nodeKey, textEditor, textEditorInitialState, backgroundColor, calloutEmoji}) {
-    const [editor] = useLexicalComposerContext();
-
-    const {isSelected, isEditing, setEditing} = React.useContext(CardContext);
-    const {cardConfig} = React.useContext(KoenigComposerContext);
-    const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
-    const [showSnippetToolbar, setShowSnippetToolbar] = React.useState(false);
-    const [emoji, setEmoji] = React.useState(calloutEmoji);
-    const [hasEmoji, setHasEmoji] = React.useState(calloutEmoji ? true : false);
-
-    const toggleEmoji = (event) => {
-        editor.update(() => {
-            const node = $getNodeByKey(nodeKey);
-            setHasEmoji(event.target.checked);
-            node.setCalloutEmoji(event.target.checked ? emoji : '');
-        });
-    };
-
-    const handleColorChange = (color) => {
-        editor.update(() => {
-            const node = $getNodeByKey(nodeKey);
-            node.setBackgroundColor(color);
-        });
-    };
-
-    const handleEmojiChange = (event) => {
-        editor.update(() => {
-            const node = $getNodeByKey(nodeKey);
-            setEmoji(event.native);
-            node.setCalloutEmoji(event.native);
-            toggleEmojiPicker();
-        });
-    };
-
-    const toggleEmojiPicker = () => {
-        if (!isEditing) {
-            setEditing(true);
-            return;
-        }
-        setShowEmojiPicker(!showEmojiPicker);
-    };
-
-    const handleToolbarEdit = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        editor.dispatchCommand(EDIT_CARD_COMMAND, {cardKey: nodeKey});
-    };
-
-    React.useEffect(() => {
-        textEditor.setEditable(isEditing);
-    }, [isEditing, textEditor]);
-
-    return (
-        <>
-            <CalloutCard
-                calloutEmoji={calloutEmoji}
-                changeEmoji={handleEmojiChange}
-                color={backgroundColor}
-                handleColorChange={handleColorChange}
-                hasEmoji={hasEmoji}
-                isEditing={isEditing}
-                nodeKey={nodeKey}
-                sanitizeHtml={sanitizeHtml}
-                setShowEmojiPicker={setShowEmojiPicker}
-                showEmojiPicker={showEmojiPicker}
-                textEditor={textEditor}
-                textEditorInitialState={textEditorInitialState}
-                toggleEmoji={toggleEmoji}
-                toggleEmojiPicker={toggleEmojiPicker}
-            />
-            <ActionToolbar
-                data-kg-card-toolbar="callout"
-                isVisible={showSnippetToolbar}
-            >
-                <SnippetActionToolbar onClose={() => setShowSnippetToolbar(false)} />
-            </ActionToolbar>
-
-            <ActionToolbar
-                data-kg-card-toolbar="callout"
-                isVisible={isSelected && !isEditing && !showSnippetToolbar}
-            >
-                <ToolbarMenu>
-                    <ToolbarMenuItem dataTestId="edit-callout-card" icon="edit" isActive={false} label="Edit" onClick={handleToolbarEdit} />
-                    <ToolbarMenuSeparator hide={!cardConfig.createSnippet} />
-                    <ToolbarMenuItem
-                        dataTestId="create-snippet"
-                        hide={!cardConfig.createSnippet}
-                        icon="snippet"
-                        isActive={false}
-                        label="Snippet"
-                        onClick={() => setShowSnippetToolbar(true)}
-                    />
-                </ToolbarMenu>
-            </ActionToolbar>
-        </>
-    );
-}
+export const INSERT_CALLOUT_COMMAND = createCommand();
 
 export class CalloutNode extends BaseCalloutNode {
-    __textEditor;
-    __textEditorInitialState;
+    __calloutTextEditor;
+    __calloutTextEditorInitialState;
 
     static kgMenu = [{
         label: 'Callout',
@@ -137,14 +30,13 @@ export class CalloutNode extends BaseCalloutNode {
 
     constructor(dataset = {}, key) {
         super(dataset, key);
-        // set up and populate nested editor from the serialized HTML
-        this.__textEditor = dataset.textEditor || createEditor({nodes: MINIMAL_NODES});
-        this.__textEditorInitialState = dataset.textEditorInitialState;
-        if (!this.__textEditorInitialState) {
-            this.__textEditorInitialState = generateEditorState({
-                editor: createEditor({nodes: MINIMAL_NODES}),
-                initialHtml: dataset.calloutText ? `<p>${dataset.calloutText}</p>` : '' // wrap with paragraph to interpret as ParagraphNode (needed for nested editor)
-            });
+
+        // set up nested editor instances
+        setupNestedEditor(this, '__calloutTextEditor', {editor: dataset.calloutTextEditor, nodes: MINIMAL_NODES});
+
+        // populate nested editors on initial construction
+        if (!dataset.calloutTextEditor && dataset.calloutText) {
+            populateNestedEditor(this, '__calloutTextEditor', `<p>${dataset.calloutText}</p>`); // we serialize with no wrapper
         }
     }
 
@@ -153,10 +45,10 @@ export class CalloutNode extends BaseCalloutNode {
 
         // convert nested editor instance back into HTML because `text` may not
         // be automatically updated when the nested editor changes
-        if (this.__textEditor) {
-            this.__textEditor.getEditorState().read(() => {
-                const html = $generateHtmlFromNodes(this.__textEditor, null);
-                const cleanedHtml = cleanBasicHtml(html);
+        if (this.__calloutTextEditor) {
+            this.__calloutTextEditor.getEditorState().read(() => {
+                const html = $generateHtmlFromNodes(this.__calloutTextEditor, null);
+                const cleanedHtml = cleanBasicHtml(html, {allowBr: true});
                 json.calloutText = cleanedHtml;
             });
         }
@@ -164,34 +56,26 @@ export class CalloutNode extends BaseCalloutNode {
         return json;
     }
 
-    createDOM() {
-        return document.createElement('div');
-    }
-
     getDataset() {
         const dataset = super.getDataset();
 
         // client-side only data properties such as nested editors
         const self = this.getLatest();
-        dataset.textEditor = self.__textEditor;
-        dataset.textEditorInitialState = self.__textEditorInitialState;
+        dataset.calloutTextEditor = self.__calloutTextEditor;
+        dataset.calloutTextEditorInitialState = self.__calloutTextEditorInitialState;
 
         return dataset;
-    }
-
-    updateDOM() {
-        return false;
     }
 
     decorate() {
         return (
             <KoenigCardWrapper nodeKey={this.getKey()}>
                 <CalloutNodeComponent
-                    backgroundColor={this.__backgroundColor}
-                    calloutEmoji={this.__calloutEmoji}
+                    backgroundColor={this.backgroundColor}
+                    calloutEmoji={this.calloutEmoji}
                     nodeKey={this.getKey()}
-                    textEditor={this.__textEditor}
-                    textEditorInitialState={this.__textEditorInitialState}
+                    textEditor={this.__calloutTextEditor}
+                    textEditorInitialState={this.__calloutTextEditorInitialState}
                 />
             </KoenigCardWrapper>
         );

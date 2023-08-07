@@ -29,13 +29,13 @@ export function EmailCtaNodeComponent({
     const handleToolbarEdit = (event) => {
         event.preventDefault();
         event.stopPropagation();
-        editor.dispatchCommand(EDIT_CARD_COMMAND, {cardKey: nodeKey});
+        editor.dispatchCommand(EDIT_CARD_COMMAND, {cardKey: nodeKey, focusEditor: false});
     };
 
     const handleSegmentChange = (value) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setSegment(value);
+            node.segment = value;
         });
     };
 
@@ -46,35 +46,35 @@ export function EmailCtaNodeComponent({
     const updateAlignment = (value) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setAlignment(value);
+            node.alignment = value;
         });
     };
 
     const toggleDividers = (event) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setShowDividers(event.target.checked);
+            node.showDividers = event.target.checked;
         });
     };
 
     const updateShowButton = (event) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setShowButton(event.target.checked);
+            node.showButton = event.target.checked;
         });
     };
 
     const updateButtonText = (event) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setButtonText(event.target.value);
+            node.buttonText = event.target.value;
         });
     };
 
     const updateButtonUrl = (val) => {
         editor.update(() => {
             const node = $getNodeByKey(nodeKey);
-            node.setButtonUrl(val);
+            node.buttonUrl = val;
         });
     };
 
@@ -117,7 +117,7 @@ export function EmailCtaNodeComponent({
                         hide={!cardConfig.createSnippet}
                         icon="snippet"
                         isActive={false}
-                        label="Snippet"
+                        label="Create snippet"
                         onClick={() => setShowSnippetToolbar(true)}
                     />
                 </ToolbarMenu>

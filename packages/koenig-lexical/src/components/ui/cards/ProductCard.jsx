@@ -26,10 +26,8 @@ export function ProductCard({
     isPinturaEnabled,
     openImageEditor,
     onRemoveImage,
-    title,
     titleEditor,
     titleEditorInitialState,
-    description,
     descriptionEditor,
     descriptionEditorInitialState,
     onRatingChange
@@ -53,7 +51,7 @@ export function ProductCard({
 
                 <div className="!m-0 flex items-start justify-between">
                     {
-                        (isEditing || !!title || !isEditorEmpty(titleEditor)) && (
+                        (isEditing || !isEditorEmpty(titleEditor)) && (
                             <div className="mr-2 flex-1">
                                 <KoenigNestedEditor
                                     autoFocus={true}
@@ -62,10 +60,10 @@ export function ProductCard({
                                     initialEditor={titleEditor}
                                     initialEditorState={titleEditorInitialState}
                                     nodes='minimal'
-                                    placeholderClassName="whitespace-normal !text-[22px] !font-bold !leading-snug text-black opacity-40 dark:text-white !tracking-tight"
+                                    placeholderClassName="whitespace-normal !font-sans !text-2xl !leading-[1.1] !font-bold !tracking-tight text-black dark:text-grey-50 opacity-40"
                                     placeholderText="Product title"
                                     singleParagraph={true}
-                                    textClassName="koenig-lexical-product-title whitespace-normal"
+                                    textClassName="koenig-lexical-heading heading-small whitespace-normal"
                                 />
                             </div>
                         )
@@ -77,15 +75,15 @@ export function ProductCard({
                 </div>
 
                 {
-                    (isEditing || !!description || !isEditorEmpty(descriptionEditor)) && (
+                    (isEditing || !isEditorEmpty(descriptionEditor)) && (
                         <div className="!mt-2">
                             <KoenigNestedEditor
                                 hasSettingsPanel={true}
                                 initialEditor={descriptionEditor}
                                 initialEditorState={descriptionEditorInitialState}
-                                placeholderClassName="!text-[1.6rem] !font-normal !leading-snug text-grey-700 opacity-50"
+                                placeholderClassName="!text-[1.6rem] !font-sans !font-normal !tracking-tight !leading-snug text-grey-700 opacity-50"
                                 placeholderText="Description"
-                                textClassName="koenig-lexical-product-description whitespace-normal text-grey-700"
+                                textClassName="koenig-lexical-subheading subheading-xsmall whitespace-normal text-grey-700"
                             />
                         </div>
                     )
@@ -161,8 +159,8 @@ ProductCard.propTypes = {
     title: PropTypes.string,
     description: PropTypes.string,
     titleEditor: PropTypes.object,
-    titleEditorInitialState: PropTypes.string,
+    titleEditorInitialState: PropTypes.object,
     descriptionEditor: PropTypes.object,
-    descriptionEditorInitialState: PropTypes.string,
+    descriptionEditorInitialState: PropTypes.object,
     onRatingChange: PropTypes.func
 };

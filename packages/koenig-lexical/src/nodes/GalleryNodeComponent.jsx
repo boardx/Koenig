@@ -35,7 +35,7 @@ export function GalleryNodeComponent({nodeKey, captionEditor, captionEditorIniti
     const [images, setImages] = React.useState(() => {
         const existingImages = editor.getEditorState().read(() => {
             const node = $getNodeByKey(nodeKey);
-            return node.getImages();
+            return node.images;
         });
         return existingImages;
     });
@@ -57,7 +57,7 @@ export function GalleryNodeComponent({nodeKey, captionEditor, captionEditorIniti
             const node = $getNodeByKey(nodeKey);
             const datasetImages = newImages.map(image => pick(image, ALLOWED_IMAGE_PROPS));
             recalculateImageRows(datasetImages);
-            node.setImages(datasetImages);
+            node.images = datasetImages;
         });
     }
 
@@ -189,7 +189,7 @@ export function GalleryNodeComponent({nodeKey, captionEditor, captionEditorIniti
                         hide={!cardConfig.createSnippet}
                         icon="snippet"
                         isActive={false}
-                        label="Snippet"
+                        label="Create snippet"
                         onClick={() => setShowSnippetToolbar(true)}
                     />
                 </ToolbarMenu>

@@ -1,27 +1,28 @@
 import {addCreateDocumentOption} from '../../utils/add-create-document-option';
+import {renderEmptyContainer} from '../../utils/render-empty-container';
 import twitterRenderer from './types/twitter';
 
-export function renderEmbedNodeToDOM(node, options = {}) {
+export function renderEmbedNode(node, options = {}) {
     addCreateDocumentOption(options);
 
     const document = options.createDocument();
-    const embedType = node.getEmbedType();
+    const embedType = node.embedType;
 
     if (embedType === 'twitter') {
         return twitterRenderer(node, document, options);
-    } 
+    }
 
     return renderTemplate(node, document, options);
 }
 
 function renderTemplate(node, document, options) {
     if (node.isEmpty()) {
-        return document.createTextNode('');
+        return renderEmptyContainer(document);
     }
     const isEmail = options.target === 'email';
-    const metadata = node.getMetadata();
-    const url = node.getUrl();
-    const isVideoWithThumbnail = node.getEmbedType() === 'video' && metadata && metadata.thumbnail_url;
+    const metadata = node.metadata;
+    const url = node.url;
+    const isVideoWithThumbnail = node.embedType === 'video' && metadata && metadata.thumbnail_url;
     const figure = document.createElement('figure');
     figure.setAttribute('class', 'kg-card kg-embed-card');
 
@@ -53,20 +54,20 @@ function renderTemplate(node, document, options) {
                 <v:oval fill="t" strokecolor="white" strokeweight="4px" style="position:absolute;left:${Math.round((emailTemplateMaxWidth / 2) - 39)};top:${Math.round((spacerHeight / 2) - 39)};width:78;height:78"><v:fill color="black" opacity="30%" /></v:oval>
                 <v:shape coordsize="24,32" path="m,l,32,24,16,xe" fillcolor="white" stroked="f" style="position:absolute;left:${Math.round((emailTemplateMaxWidth / 2) - 11)};top:${Math.round((spacerHeight / 2) - 17)};width:30;height:34;" />
             </v:group>
-            <![endif]-->cd ../
+            <![endif]-->
         `;
         figure.innerHTML = html.trim();
     } else {
-        figure.innerHTML = node.getHtml();
+        figure.innerHTML = node.html;
     }
-    
-    const caption = node.getCaption();
+
+    const caption = node.caption;
     if (caption) {
         const figcaption = document.createElement('figcaption');
-        figcaption.textContent = caption;
+        figcaption.innerHTML = caption;
         figure.appendChild(figcaption);
         figure.setAttribute('class', `${figure.getAttribute('class')} kg-card-hascaption`);
     }
 
-    return figure;
+    return {element: figure};
 }
